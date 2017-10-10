@@ -15,23 +15,23 @@ Arguments
 Features associated with one read with repeats
 
 repID         Identifier of a group with similar patterns of tandem repeats
-ID             Identifier given by the program
+ID            Identifier given by the program
 readID        Identifier in the input fasta file
-READ_length    Length of the focal read
-REPEAT_start    Start position of a repeat estimated using Kadane's algorithm
-end         End position of the estimated repeat
-len(act)         Length of the actual repeat determined
-UNIT len(est)   Length of the unit of the estimated repeat
-len(act)           Length of the unit of the actual repeat
+READ_length   Length of the focal read
+REPEAT_start  Start position of a repeat estimated using Kadane's algorithm
+end           End position of the estimated repeat
+len(act)      Length of the actual repeat determined
+UNIT len(est) Length of the unit of the estimated repeat
+len(act)      Length of the unit of the actual repeat
 #Units        Number of unit occurrences in the actual repeat
-Matches         Number of matches between the actual repeat and the tandem repeat
-Mismacthes      Number of mismatches
-Ins        Number of insertions
+Matches       Number of matches between the actual repeat and the tandem repeat
+Mismacthes    Number of mismatches
+Ins           Number of insertions
 Del           Number of deletions
-Kmer            Kmer used for calculating the actual repeat
+Kmer          Kmer used for calculating the actual repeat
 Method        Method for computing the repeat unit: De Bruijn graph search or progressive multiple alignment
-Unit_string     String of the unit of the actual repeat
-2mer_freq    Frequency distribution of sixteen 2mers (AA,AC,AG, ...,TT)
+Unit_string   String of the unit of the actual repeat
+2mer_freq     Frequency distribution of sixteen 2mers (AA,AC,AG, ...,TT)
 
 
 Example
