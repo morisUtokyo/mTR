@@ -122,4 +122,4 @@ void print_one_TR_with_read(TR aTR, int pretty_print);
 //#define DEBUG_clustering1
 //#define DEBUG_clustering2
 //#define DEBUG_repeats_in_all_reads
-#define output_clustering
+//#define output_clustering
