@@ -19,36 +19,37 @@ int feed_rr_into_repeats_in_all_reads(char *inputFile){
     }
     char s[BLK];
     int i = 0;
-
+    repeat_in_read tmp;
     
     while( fscanf(fp, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
-             &repeats_in_all_reads[i].ID,
-             repeats_in_all_reads[i].readID,
-             &repeats_in_all_reads[i].inputLen,
-             &repeats_in_all_reads[i].max_start,
-             &repeats_in_all_reads[i].max_end,
-             &repeats_in_all_reads[i].actual_repeat_len,
-             &repeats_in_all_reads[i].rep_period,
-             &repeats_in_all_reads[i].actual_rep_period,
-             &repeats_in_all_reads[i].Num_freq_unit,
-             &repeats_in_all_reads[i].Num_matches,
-             &repeats_in_all_reads[i].Num_mismatches,
-             &repeats_in_all_reads[i].Num_insertions,
-             &repeats_in_all_reads[i].Num_deletions,
-             &repeats_in_all_reads[i].Kmer,
-             &repeats_in_all_reads[i].ConsensusMethod,
-             repeats_in_all_reads[i].string,
-             &repeats_in_all_reads[i].freq_2mer[0], &repeats_in_all_reads[i].freq_2mer[1],
-             &repeats_in_all_reads[i].freq_2mer[2], &repeats_in_all_reads[i].freq_2mer[3],
-             &repeats_in_all_reads[i].freq_2mer[4], &repeats_in_all_reads[i].freq_2mer[5],
-             &repeats_in_all_reads[i].freq_2mer[6], &repeats_in_all_reads[i].freq_2mer[7],
-             &repeats_in_all_reads[i].freq_2mer[8], &repeats_in_all_reads[i].freq_2mer[9],
-             &repeats_in_all_reads[i].freq_2mer[10],&repeats_in_all_reads[i].freq_2mer[11],
-             &repeats_in_all_reads[i].freq_2mer[12],&repeats_in_all_reads[i].freq_2mer[13],
-             &repeats_in_all_reads[i].freq_2mer[14],&repeats_in_all_reads[i].freq_2mer[15]
+             &tmp.ID,
+             tmp.readID,
+             &tmp.inputLen,
+             &tmp.max_start,
+             &tmp.max_end,
+             &tmp.actual_repeat_len,
+             &tmp.rep_period,
+             &tmp.actual_rep_period,
+             &tmp.Num_freq_unit,
+             &tmp.Num_matches,
+             &tmp.Num_mismatches,
+             &tmp.Num_insertions,
+             &tmp.Num_deletions,
+             &tmp.Kmer,
+             &tmp.ConsensusMethod,
+             tmp.string,
+             &tmp.freq_2mer[0], &tmp.freq_2mer[1],
+             &tmp.freq_2mer[2], &tmp.freq_2mer[3],
+             &tmp.freq_2mer[4], &tmp.freq_2mer[5],
+             &tmp.freq_2mer[6], &tmp.freq_2mer[7],
+             &tmp.freq_2mer[8], &tmp.freq_2mer[9],
+             &tmp.freq_2mer[10],&tmp.freq_2mer[11],
+             &tmp.freq_2mer[12],&tmp.freq_2mer[13],
+             &tmp.freq_2mer[14],&tmp.freq_2mer[15]
                   ) != EOF )
     {
-        //pretty_print_one_repeat_in_read(repeats_in_all_reads[i]);
+        repeats_in_all_reads[i] = tmp;
+        repeats_in_all_reads[i].ID = i;
         i++;
     }
     
@@ -57,7 +58,7 @@ int feed_rr_into_repeats_in_all_reads(char *inputFile){
 }
 
 void print_one_repeat_in_read(repeat_in_read rr){
-    char message[1000] = "";
+    char message[2000] = "";
     sprintf(message, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s",
             rr.ID,
             rr.readID,
@@ -87,7 +88,7 @@ void print_one_repeat_in_read(repeat_in_read rr){
 
 void pretty_print_one_repeat_in_read(repeat_in_read rr){
     
-    char message[1000] = "";
+    char message[2000] = "";
     char consensus[100];
     if(rr.ConsensusMethod == 0){
         strcpy(consensus, "Progressive MA ");

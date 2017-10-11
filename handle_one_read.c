@@ -175,10 +175,11 @@ void handle_one_read_with_a_Kmer(
     float random_sd  = sqrtf(inputLen * p * (1-p));
     
     for(int j=0; j <inputLen; j++){
-        freq_interval_len[j] -= (1 + random_avg + 3 * random_sd);
-                // 1 means the count of itself.  4 * standard deviation is used.
-        // freq_interval_len[j] = freq_interval_len[j] - avg;
-                // This ad hoc approach was avoided.
+        if( freq_interval_len[j] < (1 + random_avg + 3 * random_sd)){
+            freq_interval_len[j] -= (1+avg);
+            // freq_interval_len[j] -= (1 + random_avg + 3 * random_sd);
+        }
+                // 1 means the count of itself.
     }
     
 #ifdef DEBUG_algorithm_freq
@@ -264,6 +265,7 @@ void handle_one_read_with_a_Kmer(
         }
     }
     
+    
     //---------------------------------------------------------------------------
     // Compute the representative unit string by using a progressive multiple alignment or
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
@@ -283,23 +285,31 @@ void handle_one_read_with_a_Kmer(
             max_freq = (int)freq_interval_len[max_pos];
         }
     }
-    
-    // First, traverse the De Bruijn graph of all k-mers in a greedy manner
-    actual_rep_period =
-        search_De_Bruijn_graph(max_pos, rep_period, inputLen, pow4k_1);
 
-    //  When a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
+
     int ConsensusMethod;
-    if(actual_rep_period > 0){
-        // A De Bruijin graph search is successful.
-        ConsensusMethod = DeBruijnGraphSearch;
-    }else{
-        // If the De Bruijn graph search fails, try a progressive  multiple alignment.
+    if((max_end - max_start)/rep_period < 30){
+        // If the number of repeat units is smaller than or equal to 30, use progressive multiple alignment.
         ConsensusMethod = ProgressiveMultipleAlignment;
         actual_rep_period = progressive_multiple_alignment(
-          max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
+           max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
+    }else{
+        // Otherwise, traverse the De Bruijn graph of all k-mers in a greedy manner
+        actual_rep_period =
+        search_De_Bruijn_graph(max_pos, rep_period, inputLen, pow4k_1);
+        
+        //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
+        if(actual_rep_period > 0){
+            // A De Bruijin graph search is successful.
+            ConsensusMethod = DeBruijnGraphSearch;
+        }else{
+            // If the De Bruijn graph search fails, try a progressive  multiple alignment.
+            ConsensusMethod = ProgressiveMultipleAlignment;
+            actual_rep_period = progressive_multiple_alignment(
+               max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
+        }
     }
-
+    
     
     //---------------------------------------------------------------------------
     // Compute the accuracy of the representative unit string by wrap-around DP
@@ -358,27 +368,6 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->ConsensusMethod     = -1;
 }
 
-void cpy_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
-    rr_a->ID                = rr_b->ID;
-    strcpy( rr_a->readID, rr_b->readID);
-    rr_a->inputLen          = rr_b->inputLen;
-    rr_a->max_start         = rr_b->max_start;
-    rr_a->max_end           = rr_b->max_end;
-    rr_a->actual_repeat_len = rr_b->actual_repeat_len;
-    rr_a->rep_period        = rr_b->rep_period;
-    rr_a->actual_rep_period = rr_b->actual_rep_period;
-    strcpy( rr_a->string, rr_b->string);
-    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = rr_b->freq_2mer[i]; }
-    rr_a->Num_freq_unit     = rr_b->Num_freq_unit;
-    rr_a->Num_matches       = rr_b->Num_matches;
-    rr_a->Num_mismatches    = rr_b->Num_mismatches;
-    rr_a->Num_insertions    = rr_b->Num_insertions;
-    rr_a->Num_deletions     = rr_b->Num_deletions;
-    rr_a->Kmer              = rr_b->Kmer;
-    rr_a->ConsensusMethod   = rr_b->ConsensusMethod;
-}
-
-
 void handle_one_read(char *readID, int inputLen, int read_cnt){
     
     // Put into repeats_in_all_reads any repeat instance that may not meet the conditions on MIN_REP_LEN and MIN_MATCH_RATIO. Remove unqualified instances later.
@@ -392,10 +381,10 @@ void handle_one_read(char *readID, int inputLen, int read_cnt){
         
         if( max_matches < rr.Num_matches ){
             max_matches = rr.Num_matches;
-            cpy_rr(&max_rr, &rr);
+            max_rr = rr;
             max_rr.ID = read_cnt;
         }
     }
-    cpy_rr(&repeats_in_all_reads[max_rr.ID], &max_rr);
+    repeats_in_all_reads[max_rr.ID] = max_rr;
 }
 

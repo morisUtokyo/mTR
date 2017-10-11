@@ -29,7 +29,7 @@ Mismacthes    Number of mismatches
 Ins           Number of insertions
 Del           Number of deletions
 Kmer          Kmer used for calculating the actual repeat
-Method        Method for computing the repeat unit: De Bruijn graph search (1) or progressive multiple alignment (0)
+Method        Method for computing the repeat unit: De Bruijn graph search or progressive multiple alignment
 Unit_string   String of the unit of the actual repeat
 2mer_freq     Frequency distribution of sixteen 2mers (AA,AC,AG, ...,TT)
 
