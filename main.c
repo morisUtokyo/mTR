@@ -3,13 +3,16 @@
 // Initial codes are developed by Shinichi Morishita and ....
 // version 0.6  (September 8, 2017)
 //---------------------------------------------------------------------
+// vc++ disable 4996
+#define _CRT_SECURE_NO_WARNINGS
 
-#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include "mTR.h"
+
+#include "TimeMeasure.h"
 
 void free_global_variables_and_exit(){
     // If any of the above global variables failed to be allocated in the heap, free other variables and exit.
@@ -166,7 +169,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    struct timeval s, e;
+	const TimeMeasureType* timeMeasure;
 
     //  Allocate space for global variables in the heap
     repeats_in_all_reads = (repeat_in_read*) malloc(MAX_NUM_READS*sizeof(repeat_in_read));
@@ -178,15 +181,15 @@ int main(int argc, char *argv[])
     // Process one file to associate reads with tandem repeats
     int read_cnt;
     if(strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "-r") == 0){
-        gettimeofday(&s, NULL);
+		timeMeasure = TimeMeasureBegin( );
         
         inputFile = argv[2];
         fprintf(stderr, "The input file name is %s\n", inputFile);
         
         read_cnt = handle_one_file(inputFile);
         
-        gettimeofday(&e, NULL);
-        fprintf(stderr, "time for finding repeats = %lf\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+		double time = TimeMeasureEnd( timeMeasure );
+        fprintf(stderr, "time for finding repeats = %lf\n", time );
     }
 
     // If it is asked, output a temporary file of reads with repeats
@@ -216,7 +219,7 @@ int main(int argc, char *argv[])
     }
     
     if(strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "-c") == 0){
-        gettimeofday(&s, NULL);
+		timeMeasure = TimeMeasureBegin( );
         
         int Num_qualified_TRs = k_means_clustering(read_cnt);
         
@@ -226,9 +229,9 @@ int main(int argc, char *argv[])
                 fflush( stdout );
             }
         }
-        
-        gettimeofday(&e, NULL);
-        fprintf(stderr, "time for clustering repeats = %lf\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+
+		double time = TimeMeasureEnd( timeMeasure );
+        fprintf(stderr, "time for clustering repeats = %lf\n", time );
     }
     
     //  Free space for global variables in the heap
