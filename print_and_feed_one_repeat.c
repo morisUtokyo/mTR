@@ -4,6 +4,8 @@
 //
 //  Created by Shinichi Morishita on 2017/10/06.
 //
+// vc++ disable 4996
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <stdlib.h>
