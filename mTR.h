@@ -70,6 +70,7 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
 repeat_in_read *repeats_in_all_reads;
 
 // For clustering repeats
+
 #define MIN_NUM_repTR 1
 
 typedef struct TR1{    // Sorted according to actual_rep_period, freq_2mer, and Num_freq_unit
@@ -88,6 +89,7 @@ TR   *repTR_list;
 // External functions
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
+int handle_one_file(char *inputFile);
 void handle_one_read( char *readID, int inputLen, int read_cnt);
 
 int progressive_multiple_alignment(
@@ -104,7 +106,7 @@ void pretty_print_one_repeat_in_read(repeat_in_read rr);
 void print_one_repeat_in_read(repeat_in_read rr);
 int feed_rr_into_repeats_in_all_reads(char *inputFile);
 
-int k_means_clustering(int read_cnt);
+void k_means_clustering(int read_cnt, int pretty_print);
 void print_one_TR_with_read(TR aTR, int pretty_print);
 
 // For debugging with #ifdef

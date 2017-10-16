@@ -31,7 +31,7 @@ void print_one_TR_with_read(TR aTR, int pretty_print){
 
 void print_one_TR(TR aTR){
     
-    char message[1000] = "";
+    char message[2000] = "";
     
     if(aTR.actual_rep_period > 0){
         if(aTR.repTR == NULL){
@@ -65,31 +65,34 @@ void print_one_TR(TR aTR){
 }
 
 int cmp_TR(TR aTR, TR bTR, int mode){
-    // mode = 0: actual_rep_period, freq_2mer are considered
-    // mode = 1: actual_rep_period, freq_2mer, Num_freq_unit are considered
-    // mode = 2:
+    // mode = 0: Ordered by <actual_rep_period, freq_2mer> of aTR and bTR
+    // mode = 1: Ordered by <actual_rep_period, freq_2mer, Num_freq_unit> of aTR and bTR
+    // mode = 2: Ordered by <frequency, identifier> of the representative TRs of aTR and bTR
     
     int diff;
     if(mode == 0 || mode == 1){
+        // Compute the differenece between the unit lengths (actual_rep_period)
         diff = aTR.actual_rep_period - bTR.actual_rep_period;
-        if(diff == 0){
+        // If the lengths of the two units are equal, compute the difference between the 2mer distribution (freq_2mer)
+        if(diff != 0){
+            return(diff);   // negative: <, positive means: >
+        }else{ // diff == 0
             for(int i=0; i<16; i++){
                 diff = aTR.freq_2mer[i] - bTR.freq_2mer[i];
                 if(diff != 0){
                     return(diff);   // negative: <, positive means: >
                 }
             }
-            // aTR.freq_2mer[i] == bTR.freq_2mer[i] for all i
+            // If aTR.freq_2mer == bTR.freq_2mer; namely, aTR.freq_2mer[i] == bTR.freq_2mer[i] for all i.
             if( mode == 1){
                 diff = aTR.Num_freq_unit - bTR.Num_freq_unit;
                 return(diff);
             }else{
                 return(0);
             }
-        }else{
-            return(diff);   // negative: <, positive means: >
         }
     }else if(mode == 2){
+        // Ordering according to the frequency and identifier of the representative TR
         diff = -(aTR.repTR->freq - bTR.repTR->freq);
         if(diff == 0){
             diff = aTR.repTR->ID - bTR.repTR->ID;
@@ -125,6 +128,8 @@ int partition_TR_list(int left, int right, int mode) {
     return i;
 }
 
+// We set "mode" to 1 in the first call of this function.
+// Afterwards, we set "mode" to 2 in the second call.
 void sort_TR_List(int left, int right, int mode){
     if (left < right) {
         int i = partition_TR_list(left, right, mode); // i: Position of the pivot.
@@ -139,9 +144,12 @@ int select_repTR_list(int Num_qualified_TRs){
     int i;
     for(i=0; i<(Num_qualified_TRs - 1); i++){
         if(cmp_TR(TR_list[i], TR_list[i+1], 0) == 0){
+            // mode = 0: Ordered by <actual_rep_period, freq_2mer>
+            // If two consecutive TRs are identical in terms of <actual_rep_period, freq_2mer>,
+            // put them into an identical group, and increment its size, denoted by freq.
             freq++;
-        }else if(MIN_NUM_repTR <= freq){      // End of a block of identical TRs
-            repTR_list[j] = TR_list[i];
+        }else if(MIN_NUM_repTR <= freq){    // End of a block of identical TRs
+            repTR_list[j] = TR_list[i];    // Set the last TR in one group to the reresentative
             repTR_list[j].freq = freq;
             for(int k=i; i-freq+1<=k; k--){   // Update representative IDs
                 TR_list[k].repID =  repTR_list[j].ID;
@@ -151,7 +159,7 @@ int select_repTR_list(int Num_qualified_TRs){
             freq = 1;
         }
     }
-    if(i == Num_qualified_TRs - 1){
+    if(i == Num_qualified_TRs - 1 && MIN_NUM_repTR <= freq){
         repTR_list[j] = TR_list[i];
         repTR_list[j].freq = freq;
         for(int k=i; i-freq+1<=k; k--){   // Update representative IDs
@@ -177,16 +185,18 @@ int TRs_in_neighborhood(TR aTR, TR repTR){
 }
 
 void revise_repTR_list(int Num_repTRs){
+    // Revise the clustering to merge groups whose 2mer distributions are similar according to the measure defined in TRs_in_neighborhood. Select the largest group as the representative.
     for(int i=0; i<Num_repTRs; i++){
         TR aTR = repTR_list[i];
+        // Search the list of TRs for those similar to the focal TR.
+        // Candidate TRs are of length within 10% of the focal TR length.
         int lb = aTR.actual_rep_period - (int)(aTR.actual_rep_period * 0.1);
         int ub = aTR.actual_rep_period + (int)(aTR.actual_rep_period * 0.1);
         int max_freq = aTR.freq;
         int max_i = i;
-        //printf("%i, %i\n", lb, ub);
         
         // Search backward
-        for(int j=i-1; 0<=j; j--){
+        for(int j=i-1; 0<=j; j--){  // Search positions
             TR repTR = repTR_list[j];
             if(lb <= repTR.actual_rep_period){
                 if(TRs_in_neighborhood(aTR, repTR) == 1 && max_freq < repTR.freq){
@@ -216,6 +226,7 @@ void revise_repTR_list(int Num_repTRs){
     for(int i=0; i<Num_repTRs; i++){
         TR *aTR = &repTR_list[i];
         if(aTR->ID != aTR->repID){
+            // Search the root of representative groups recursively.
             while(aTR->ID != aTR->repID){
                 aTR = aTR->repTR;
             }
@@ -230,6 +241,7 @@ void update_repTRs_in_TR_list(int Num_TRs){
     for(int i=0; i<Num_TRs; i++){
         TR *aTR = TR_list[i].repTR;
         if(aTR->ID != aTR->repID){
+            // Search the root of representative groups recursively.
             while(aTR->ID != aTR->repID){
                 aTR = aTR->repTR;
             }
@@ -241,7 +253,7 @@ void update_repTRs_in_TR_list(int Num_TRs){
 }
 
 
-int k_means_clustering(int read_cnt){
+void k_means_clustering(int read_cnt, int pretty_print){
     
     TR_list      = (TR*) malloc(read_cnt*sizeof(TR));
     if( TR_list == NULL ){
@@ -269,15 +281,17 @@ int k_means_clustering(int read_cnt){
            1 < aRR.Num_freq_unit )
         { // qualifed
             TR_list[j].ID = aRR.ID;
+            TR_list[j].repID = aRR.ID;
+            TR_list[j].repTR = NULL;
+            TR_list[j].freq = 1;
+            
             TR_list[j].actual_rep_period = aRR.actual_rep_period;
             for(int k =0; k<16; k++){
                 TR_list[j].freq_2mer[k] = aRR.freq_2mer[k];
             }
             TR_list[j].Num_freq_unit = aRR.Num_freq_unit;
             // initialization
-            TR_list[j].repID = TR_list[j].ID;
-            TR_list[j].repTR = NULL;
-            TR_list[j].freq = 1;
+
             j++;
         }
     }
@@ -287,11 +301,10 @@ int k_means_clustering(int read_cnt){
     printf("Before being sorted\n");
     for(j = 0; j < Num_qualified_TRs; j++){
         print_one_TR(TR_list[j]);
-        //if(j < Num_qualified_TRs-1){ printf("%i\n", cmp_TR(TR_list[j], TR_list[j+1]));}
     }
 #endif
     
-    // Sort according to actual_rep_period, freq_2mer, and Num_freq_unit
+    // Sort according to actual_rep_period, freq_2mer, and Num_freq_unit by setting mode to 1
     sort_TR_List(0, Num_qualified_TRs - 1, 1);
     
     
@@ -299,7 +312,6 @@ int k_means_clustering(int read_cnt){
     printf("After being sorted\n");
     for(j = 0; j < Num_qualified_TRs; j++){
         print_one_TR(TR_list[j]);
-        //if(j < Num_qualified_TRs-1){ printf("%i\n", cmp_TR(TR_list[j], TR_list[j+1]));}
     }
 #endif
     
@@ -325,7 +337,7 @@ int k_means_clustering(int read_cnt){
     
     update_repTRs_in_TR_list(Num_qualified_TRs);
     
-    // Sort according to frequency and repID  mode=2
+    // Sort according to frequency and repID by setting mode to 2
     sort_TR_List(0, Num_qualified_TRs - 1, 2);
     
 #ifdef DEBUG_clustering2
@@ -335,10 +347,15 @@ int k_means_clustering(int read_cnt){
     }
 #endif
     
+    for(int j = 0; j < Num_qualified_TRs; j++){
+        print_one_TR_with_read(TR_list[j], pretty_print);
+        if(j % BLK == 0){
+            fflush( stdout );
+        }
+    }
+
     free(TR_list);
     free(repTR_list);
-    
-    return(Num_qualified_TRs);
     
 }
 
