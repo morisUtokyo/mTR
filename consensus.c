@@ -8,17 +8,55 @@
 #include <string.h>
 #include "mTR.h"
 
+int maxFreqKmer(int inputLen, int pow4k){
+    int maxCnt = 0;
+    int AnsKmer = 0;
+    for(int i = 1; i < pow4k; i++){
+        int Cnt;
+        if(i == pow4k - 1){
+            Cnt = inputLen - count[i];
+        }else{
+            Cnt = count[i+1] - count[i];
+        }
+        if(maxCnt < Cnt){
+            maxCnt = Cnt;
+            AnsKmer = i;
+        }
+    }
+    return(AnsKmer);
+}
 
-int search_De_Bruijn_graph(int max_pos, int rep_period, int inputLen, int pow4k_1){
+void print_4_decimal_array(int* val, int len, char *return_string){
+    strcpy(return_string, "");
+    for(int i=0; i<len; i++){
+        switch(val[i]){
+            case 0: strcat(return_string, "A"); break;
+            case 1: strcat(return_string, "C"); break;
+            case 2: strcat(return_string, "G"); break;
+            case 3: strcat(return_string, "T"); break;
+            default: fprintf(stderr, "fatal error: input char %i", val[i]); exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void search_De_Bruijn_graph(int pow4k, repeat_in_read *tmp_rr, repeat_in_read *rr){
     
+    int max_start   = tmp_rr->max_start;
+    int max_end     = tmp_rr->max_end;
+    int rep_period  = tmp_rr->rep_period;
+    int Kmer        = tmp_rr->Kmer;
+    int inputLen    = tmp_rr->inputLen;
     int actual_rep_period = 0;
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     
+    int Node = maxFreqKmer(inputLen, pow4k);
+    
+    int pow4k_1 = pow4k / 4;
     int start, end, tmp_count;
-    int Node = inputString[max_pos];
     int initialNode = Node;
     int nextNode;
     
+    int rep_unit_string[MAX_PERIOD];
     for(int k=0; k< MAX_PERIOD; k++){
         rep_unit_string[k] = Node / pow4k_1;
         
@@ -33,6 +71,7 @@ int search_De_Bruijn_graph(int max_pos, int rep_period, int inputLen, int pow4k_
             }else{
                 end = count[ nextNode+1 ];
             }
+            
             tmp_count = end - start + 1;
             
             if(max_count_lsd < tmp_count){
@@ -43,31 +82,48 @@ int search_De_Bruijn_graph(int max_pos, int rep_period, int inputLen, int pow4k_
         Node = 4 * (Node % pow4k_1) + max_lsd;
         
         // If you hit the initial node, terminate the search.
-        if(Node == initialNode &&
-           rep_period * MIN_REP_LEN_RATIO < k+1 && k+1 < MAX_PERIOD){
-            // This part is somewhat ad-hoc and should be justified.
+        if(Node == initialNode && k+1 < MAX_PERIOD){
             actual_rep_period = k+1;
             break;
         }
     }
-    return(actual_rep_period);
+    
+    rr->actual_rep_period = actual_rep_period;
+    rr->ConsensusMethod   = DeBruijnGraphSearch;
+    if(actual_rep_period > 0){
+        wrap_around_DP(rep_unit_string,
+                       actual_rep_period,
+                       &orgInputString[max_start],
+                       (max_end - max_start + 1),
+                       rr);
+        print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
+        freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
+    }
 }
 
-int progressive_multiple_alignment(
-            int max_start, int max_end, int max_pos,
-            int rep_period, int Kmer, int inputLen, int pow4k){
+void progressive_multiple_alignment(
+           int pow4k, repeat_in_read *tmp_rr, repeat_in_read *rr){
+    
+    int max_start   = tmp_rr->max_start;
+    int max_end     = tmp_rr->max_end;
+    int rep_period  = tmp_rr->rep_period;
+    int Kmer        = tmp_rr->Kmer;
+    int inputLen    = tmp_rr->inputLen;
 
     // Start from the positions associated with k-mers of the maximum frequency in "count" data structure ranging from "start" to "end defined below
+    
+    int MaxFreqKmer = maxFreqKmer(inputLen, pow4k);
+    
     int start, end;
-    start = count[inputString[max_pos]];
-    if(inputString[max_pos] == pow4k-1){
+    start = count[MaxFreqKmer];
+    if(MaxFreqKmer == pow4k - 1){
         end = inputLen;
     }else{
-        end = count[ inputString[max_pos]+1 ];
+        end = count[MaxFreqKmer + 1];
     }
     
 #ifdef DEBUG_progressive_multiple_alignment
-    printf("max_start = %i\tmax_end = %i\tmax_pos = %i\trep_period =%i\tstart=%i\tend=%i\tKmer = %i\n", max_start, max_end, max_pos, rep_period, start, end, Kmer);
+    printf("max_start = %i\tmax_end = %i\trep_period =%i\tstart=%i\tend=%i\tKmer = %i\n", max_start, max_end, rep_period, start, end, Kmer);
 #endif
     
     
@@ -85,6 +141,7 @@ int progressive_multiple_alignment(
     int k = start;
     // Move k into the repeat region
     for( ; ( sortedString[k] < max_start) && (k < end); k++);
+    int max_pos = sortedString[k];
     
     // A progressive multiple alignment between
     // the reference starting from max_pos and
@@ -162,6 +219,7 @@ int progressive_multiple_alignment(
     }
     // Obtain the consensus string and set it to rep_unit_string with actual_rep_period
     // The current implementation is naive and needs improvement.
+    int rep_unit_string[MAX_PERIOD];
     for(int i=0; i < rep_period; i++){
         rep_unit_string[i] = 0;         // default 0=a
         int tmp_max = consensus[i][0];
@@ -192,6 +250,17 @@ int progressive_multiple_alignment(
     }
 #endif
     
-    return(actual_rep_period);
+    rr->actual_rep_period = actual_rep_period;
+    rr->ConsensusMethod   = ProgressiveMultipleAlignment;
+    if(actual_rep_period > 0)
+    {
+        wrap_around_DP(rep_unit_string,
+                       actual_rep_period,
+                       &orgInputString[max_start],
+                       (max_end - max_start + 1),
+                       rr);
+        print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
+        freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
+    }
 }
 

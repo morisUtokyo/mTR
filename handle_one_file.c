@@ -1,8 +1,5 @@
 //
 //  handle_one_file.c
-//  
-//
-//  Created by Shinichi Morishita on 2017/10/12.
 //
 
 #include <stdio.h>
@@ -21,7 +18,6 @@ void free_global_variables_and_exit(){
     if(Kadane_val        != NULL){ free(Kadane_val); }
     if(max_starts        != NULL){ free(max_starts); }
     if(count_period_all  != NULL){ free(count_period_all); }
-    if(rep_unit_string   != NULL){ free(rep_unit_string); }
     if(WrapDP            != NULL){ free(WrapDP); }
     fprintf(stderr, "cannot allocate space for one of global variables in the heap.\n");
     exit(EXIT_FAILURE);
@@ -65,9 +61,6 @@ int handle_one_file(char *inputFile){
     
     count_period_all= (int *)malloc( sizeof(int) * MAX_PERIOD);
     if( count_period_all == NULL ){ free_global_variables_and_exit(); }
-    
-    rep_unit_string = (int *)malloc( sizeof(int) * MAX_PERIOD);
-    if( rep_unit_string == NULL ){ free_global_variables_and_exit(); }
     
     WrapDP          = (int *)malloc(sizeof(int) * (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1));
     if( WrapDP == NULL ){ free_global_variables_and_exit(); }
@@ -119,6 +112,7 @@ int handle_one_file(char *inputFile){
             }
         }
     }
+    // Process the last read.
     inputLen = cnt;
     handle_one_read(readID, inputLen, read_cnt);
     read_cnt++;
@@ -133,7 +127,6 @@ int handle_one_file(char *inputFile){
     free(Kadane_val);
     free(max_starts);
     free(count_period_all);
-    free(rep_unit_string);
     free(WrapDP);
     
     return(read_cnt);

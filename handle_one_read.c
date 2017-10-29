@@ -1,9 +1,6 @@
 //
 //  handle_one_read.c
 //  
-//
-//  Created by Shinichi Morishita on 2017/10/06.
-//
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +8,11 @@
 #include <string.h>
 #include "mTR.h"
 
+// Probability of x in normal distribution
+float p_nd(float x, float avg, float sd){
+    float p = (float)exp( -pow(x-avg,2) / (2 * pow(sd,2) ) ) / sqrt( 2 * M_PI * pow(sd,2) );
+    return(p);
+}
 
 void print_4_decimals(int val, int len){
     if(len > 0){
@@ -21,19 +23,6 @@ void print_4_decimals(int val, int len){
             case 2: printf("G"); break;
             case 3: printf("T"); break;
             default: fprintf(stderr, "fatal input char %i", val%4); exit(EXIT_FAILURE);
-        }
-    }
-}
-
-void print_4_decimal_array(int* val, int len, char *return_string){
-    strcpy(return_string, "");
-    for(int i=0; i<len; i++){
-        switch(val[i]){
-            case 0: strcat(return_string, "A"); break;
-            case 1: strcat(return_string, "C"); break;
-            case 2: strcat(return_string, "G"); break;
-            case 3: strcat(return_string, "T"); break;
-            default: fprintf(stderr, "fatal error: input char %i", val[i]); exit(EXIT_FAILURE);
         }
     }
 }
@@ -49,15 +38,51 @@ void freq_2mer_array(int* val, int len, int *freq_2mer){
     freq_2mer[val[len-1]*4+val[0]]++;
 }
 
-
-void handle_one_read_with_a_Kmer(
-                                 char *readID,
-                                 int inputLen,
-                                 int Kmer,
-                                 repeat_in_read *rr
-                                 ){
-    int i;
+// Return 1 if max_rr < rr, 0 otherwise.
+int better_rr(repeat_in_read *max_rr, repeat_in_read *rr){
     
+    float max_rr_match_ratio = 0;
+    if(max_rr->actual_repeat_len > 0){
+        max_rr_match_ratio = (float)max_rr->Num_matches / max_rr->actual_repeat_len;
+    }
+    float rr_match_ratio = 0;
+    if(rr->actual_repeat_len > 0){
+        rr_match_ratio = (float)rr->Num_matches / rr->actual_repeat_len;
+    }
+    
+    if( MIN_MATCH_RATIO < rr_match_ratio &&
+       max_rr_match_ratio < rr_match_ratio &&
+       max_rr->Num_matches < rr->Num_matches &&
+       MIN_REP_LEN < (rr->actual_rep_period * rr->Num_freq_unit) &&
+       1 < rr->Num_freq_unit )
+    {
+        return(1);
+    }else{
+        return(0);
+    }
+}
+
+void substitute_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
+    rr_a->ID                = rr_b->ID;
+    strcpy( rr_a->readID, rr_b->readID);
+    rr_a->inputLen          = rr_b->inputLen;
+    rr_a->max_start         = rr_b->max_start;
+    rr_a->max_end           = rr_b->max_end;
+    rr_a->actual_repeat_len = rr_b->actual_repeat_len;
+    rr_a->rep_period        = rr_b->rep_period;
+    rr_a->actual_rep_period = rr_b->actual_rep_period;
+    rr_a->Num_freq_unit     = rr_b->Num_freq_unit;
+    rr_a->Num_matches       = rr_b->Num_matches;
+    rr_a->Num_mismatches    = rr_b->Num_mismatches;
+    rr_a->Num_insertions    = rr_b->Num_insertions;
+    rr_a->Num_deletions     = rr_b->Num_deletions;
+    rr_a->Kmer              = rr_b->Kmer;
+    rr_a->ConsensusMethod   = rr_b->ConsensusMethod;
+    strcpy( rr_a->string, rr_b->string);
+    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = rr_b->freq_2mer[i]; }
+}
+
+repeat_in_read handle_one_read_with_a_Kmer( char *readID, int inputLen, int Kmer ){
     int pow4k_1 = 1;    // 4^{k-1}  e.g., 4^(4-1) = 64
     for(int i=0; i<(Kmer-1); i++){ pow4k_1 = 4 * pow4k_1; }
     int pow4k = 4 * pow4k_1;  // 4 * 4^{k-1} = 4^k
@@ -91,9 +116,9 @@ void handle_one_read_with_a_Kmer(
     //---------------------------------------------------------------------------
     // Sort k-mers using counting sort and store the positions of k-mers in sortedString
     //---------------------------------------------------------------------------
-    for(i = 0; i < pow4k; i++){ count[i] = 0;}  // Initialization
-    for(i = 0; i < inputLen; i++){ count[ inputString[i] ]++; }    // Perform counting
-    for(i = 1; i < pow4k; i++){ count[i] = count[i-1] + count[i]; }
+    for(int i = 0; i < pow4k; i++){ count[i] = 0;}  // Initialization
+    for(int i = 0; i < inputLen; i++){ count[ inputString[i] ]++; }    // Perform counting
+    for(int i = 1; i < pow4k; i++){ count[i] = count[i-1] + count[i]; }
     for(int i=0; i<MAX_INPUT_LENGTH; i++){ sortedString[i] = 0; } // Initialization
     for(int i=inputLen-1; 0 <= i; i--){
         sortedString[ --count[inputString[i]] ] = i;
@@ -138,111 +163,15 @@ void handle_one_read_with_a_Kmer(
     free(oneRow);
 #endif
     
-    
     //---------------------------------------------------------------------------
-    //  Compute the frequency distribution of interval lengths by counting sort
-    //---------------------------------------------------------------------------
-    
-    for(int j=0; j<MAX_INPUT_LENGTH; j++){  // Initialization
-        freq_interval_len[j] = 0;
-    }
-    for(int j=0; j<inputLen; j++){
-        start = count[ inputString[j] ];
-        if(inputString[j] == pow4k-1){
-            end = inputLen;
-        }else{
-            end = count[ inputString[j]+1 ];
-        }
-        freq_interval_len[j] = (float)(end - start);
-    }
-    
-    
-    // Compute the actual average and standard deviation
-    float avg = 0;
-    float sd = 0;
-    for(int j=0; j <inputLen; j++){
-        avg += freq_interval_len[j];
-    }
-    avg = avg/inputLen;
-    for(int j=0; j <inputLen; j++){
-        sd += (freq_interval_len[j] - avg)*(freq_interval_len[j] - avg);
-    }
-    sd = sqrtf(sd/inputLen);
-    
-    // Assuming the random distribution of k-mers, computethe averaga and standard deviation
-    float p = (float)1/pow4k;
-    float random_avg = inputLen * p;
-    float random_sd  = sqrtf(inputLen * p * (1-p));
-    
-    for(int j=0; j <inputLen; j++){
-        if( freq_interval_len[j] < (1 + random_avg + 3 * random_sd)){
-            freq_interval_len[j] -= (1+avg);
-            // freq_interval_len[j] -= (1 + random_avg + 3 * random_sd);
-        }
-                // 1 means the count of itself.
-    }
-    
-#ifdef DEBUG_algorithm_freq
-    printf("avg=%f\t sd=%f p=%f pow4k=%i len=%i random_avg=%f random_sd=%f\n", avg, sd, p, pow4k, inputLen, random_avg, random_sd);
-    //printf("position\tfreq\n");
-    //for(int j=0; j<inputLen; j++){
-    //    printf("%i\t%i\n", j, (int)freq_interval_len[j]);
-    //}
-    //printf("\n");
-#endif
-    
-    //---------------------------------------------------------------------------
-    //  Determine a highly repetitive region as an optimal range using Kadane's algorithm
+    // Compute the periodicity with the maximum count in the input string
     //---------------------------------------------------------------------------
     
     // Initialization
-    for(int j=0; j<MAX_INPUT_LENGTH; j++){
-        Kadane_val[j] = 0;
-        max_starts[j] = 0;
-    }
-    for(int j=0; j<inputLen; j++){
-        if(j == 1){
-            Kadane_val[j] = freq_interval_len[j];
-            max_starts[j] = j;
-        }else{
-            if(freq_interval_len[j] < Kadane_val[j-1]+freq_interval_len[j]){
-                Kadane_val[j] = Kadane_val[j-1]+freq_interval_len[j];
-                max_starts[j] = max_starts[j-1];
-            }else{
-                Kadane_val[j] = freq_interval_len[j];
-                max_starts[j] = j;
-            }
-        }
-    }
-    // backtracing
-    float max_val = Kadane_val[0];
-    int max_end = 0;
-    for(int j=1; j<inputLen; j++){
-        if(max_val < Kadane_val[j]){
-            max_val = Kadane_val[j];
-            max_end = j;
-        }
-    }
-    int max_start = max_starts[max_end];
-    
-#ifdef DEBUG_algorithm_Kadane
-    printf("position\tfreq\n");
-    for(int j=max_start; j<max_end; j++){
-        printf("%i\t%i\n", j, (int)freq_interval_len[j]);
-    }
-    printf("\n");
-    printf("avg=%f\t sd=%f\n", avg, sd);
-#endif
-    
-    //---------------------------------------------------------------------------
-    // Compute the periodicity with the maximum count
-    //---------------------------------------------------------------------------
-    
-    // Initialization
-    for(i = 0; i < MAX_PERIOD; i++){
+    for(int i = 0; i < MAX_PERIOD; i++){
         count_period_all[i] = 0;
     }
-    for(int i=max_start; i <= max_end; i++){
+    for(int i=0; i < inputLen; i++){
         start = count[inputString[i]];
         if(inputString[i] == pow4k-1){
             end = inputLen;
@@ -265,126 +194,169 @@ void handle_one_read_with_a_Kmer(
         }
     }
     
+    //---------------------------------------------------------------------------
+    //  Compute the frequency distribution of interval lengths by counting sort
+    //---------------------------------------------------------------------------
+    
+    for(int j=0; j<MAX_INPUT_LENGTH; j++){  // Initialization
+        freq_interval_len[j] = 0;
+    }
+    
+    int band_width = rep_period * 10;  // 10 performed best among {3,5,10,20,50}
+    // To make sure the independence of the input length, examine the band within 10 times the estimated repeat unit length from the diagonal
+    
+    for(int j=0; j<inputLen; j++){
+        start = count[ inputString[j] ];
+        if(inputString[j] == pow4k-1){
+            end = inputLen;
+        }else{
+            end = count[ inputString[j]+1 ];
+        }
+
+        int cnt = 0;
+        for(int h = start; h < end; h++){
+            if( (j - band_width) <= sortedString[h] && sortedString[h] <= (j + band_width)){
+                cnt++;
+            }
+        }
+        freq_interval_len[j] = (float)(cnt - 1);
+        // freq_interval_len[j] = (float)(end - start) - 1;
+        // Remove the k-mer at the j-th position and reduce the frequency by 1
+    }
+    
+    // Assuming the random distribution of k-mers, computethe averaga and standard deviation
+    float p = (float)1/pow4k;
+    float random_avg = 2 * band_width * p;
+    float random_sd  = sqrtf(2 * band_width * p * (1-p));
+    
+    for(int j=0; j <inputLen; j++){
+        /*
+         // Probablistic model did not perform well
+        double p_value = p_nd( freq_interval_len[j], random_avg, random_sd);
+        double p_threshold = 0.05;
+        
+        if(p_value < (p_threshold / inputLen) ){  // Bonferroni correction as we examine "inputLen" positions.
+        //if(p_value < p_threshold  ){
+            freq_interval_len[j] = Kmer;
+        }else{
+            freq_interval_len[j] = -1;
+        }
+         */
+        
+        freq_interval_len[j] -= (random_avg + 1 * random_sd);
+                    // best prediction among {0,1,2,3}
+    }
+
+    //---------------------------------------------------------------------------
+    //  Determine a highly repetitive region as an optimal range using Kadane's algorithm
+    //---------------------------------------------------------------------------
+
+    int max_start, max_end;
+
+    // Initialization
+    for(int j=0; j<MAX_INPUT_LENGTH; j++){
+        Kadane_val[j] = 0;
+        max_starts[j] = 0;
+    }
+    for(int j=0; j<inputLen; j++){
+        if(j == 1){
+            Kadane_val[j] = freq_interval_len[j];
+            max_starts[j] = j;
+        }else{
+            if(freq_interval_len[j] < Kadane_val[j-1]+freq_interval_len[j]){
+                Kadane_val[j] = Kadane_val[j-1]+freq_interval_len[j];
+                max_starts[j] = max_starts[j-1];
+            }else{
+                Kadane_val[j] = freq_interval_len[j];
+                max_starts[j] = j;
+            }
+        }
+    }
+    // backtracing
+    float max_val = Kadane_val[0];
+
+    max_end = 0;
+    for(int j=1; j<inputLen; j++){
+        if(max_val < Kadane_val[j]){
+            max_val = Kadane_val[j];
+            max_end = j;
+        }
+    }
+    max_start = max_starts[max_end];
+    
+
+#ifdef DEBUG_algorithm_Kadane
+    printf("position\tfreq\n");
+    for(int j=max_start; j<max_end; j++){
+        printf("%i\t%i\n", j, (int)freq_interval_len[j]);
+    }
+    printf("\n");
+#endif
+
     
     //---------------------------------------------------------------------------
     // Compute the representative unit string by using a progressive multiple alignment or
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
     //---------------------------------------------------------------------------
+
+    repeat_in_read tmp_rr;
+    strcpy( tmp_rr.readID, readID);
+    tmp_rr.inputLen  = inputLen;
+    tmp_rr.max_start = max_start;
+    tmp_rr.max_end   = max_end;
+    tmp_rr.rep_period= rep_period;
+    tmp_rr.Kmer      = Kmer;
+    tmp_rr.actual_repeat_len = 0;
+    tmp_rr.Num_freq_unit     = 0;
+
+    repeat_in_read max_rr, rr;
+    substitute_rr(&rr, &tmp_rr);
     
-    // Initialization
-    int actual_rep_period;
-    for(i = 0; i < MAX_PERIOD; i++){
-        rep_unit_string[i] = 0;
-    }
-    //　Locate the initial position (k-mer) with the maximum frequency
-    int max_pos = max_start;
-    max_freq   = (int)freq_interval_len[max_pos];
-    for(int j=max_start; j <= max_end; j++){
-        if(max_freq < freq_interval_len[j]){
-            max_pos  = j;
-            max_freq = (int)freq_interval_len[max_pos];
-        }
-    }
-
-
-    int ConsensusMethod;
-    if((max_end - max_start)/rep_period < 30){
-        // If the number of repeat units is smaller than or equal to 30, use progressive multiple alignment.
-        ConsensusMethod = ProgressiveMultipleAlignment;
-        actual_rep_period = progressive_multiple_alignment(
-           max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
+    // Set max_rr to the NULL value
+    max_rr.Num_matches = -1;
+    max_rr.actual_repeat_len = 0;
+    
+    // First, traverse the De Bruijn graph of all k-mers in a greedy manner
+    search_De_Bruijn_graph(pow4k, &tmp_rr, &rr);
+    if( better_rr(&max_rr, &rr) == 1 ){
+        substitute_rr(&max_rr, &rr);
     }else{
-        // Otherwise, traverse the De Bruijn graph of all k-mers in a greedy manner
-        actual_rep_period =
-        search_De_Bruijn_graph(max_pos, rep_period, inputLen, pow4k_1);
-        
-        //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
-        if(actual_rep_period > 0){
-            // A De Bruijin graph search is successful.
-            ConsensusMethod = DeBruijnGraphSearch;
-        }else{
-            // If the De Bruijn graph search fails, try a progressive  multiple alignment.
-            ConsensusMethod = ProgressiveMultipleAlignment;
-            actual_rep_period = progressive_multiple_alignment(
-               max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
+#ifdef USE_an_additional_progressive_multiple_alignment
+        // If De Bruijn search fails, use a progressive multiple alignment
+        progressive_multiple_alignment(pow4k, &tmp_rr, &rr);
+        if( better_rr(&max_rr, &rr) == 1){
+            substitute_rr(&max_rr, &rr);
         }
+#endif
     }
-    
-    
-    //---------------------------------------------------------------------------
-    // Compute the accuracy of the representative unit string by wrap-around DP
-    //---------------------------------------------------------------------------
-    
-    strcpy( rr->readID, readID);
-    rr->inputLen  = inputLen;
-    rr->max_start = max_start;
-    rr->max_end   = max_end;
-    rr->rep_period= rep_period;
-    rr->actual_rep_period = actual_rep_period;
-    rr->Kmer      = Kmer;
-    rr->Num_freq_unit     = 0;
-    rr->ConsensusMethod = ConsensusMethod;
-    
-    if(actual_rep_period > 0){
-        int actual_repeat_len, Num_freq_unit, Num_matches, Num_mismatches, Num_insertions, Num_deletions;
-        
-        wrap_around_DP(rep_unit_string,
-                       actual_rep_period,
-                       &orgInputString[max_start],
-                       (max_end - max_start + 1),
-                       &actual_repeat_len,  &Num_freq_unit,
-                       &Num_matches,        &Num_mismatches,
-                       &Num_insertions,     &Num_deletions);
-        
-        rr->Num_freq_unit     = Num_freq_unit;
-        rr->Num_matches       = Num_matches;
-        rr->Num_mismatches    = Num_mismatches;
-        rr->Num_insertions    = Num_insertions;
-        rr->Num_deletions     = Num_deletions;
-        
-        rr->actual_repeat_len = actual_repeat_len;
-        print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
-        freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
-    }
-}
-
-void clear_rr(repeat_in_read *rr_a){
-    rr_a->ID                = -1;
-    strcpy( rr_a->readID, "");
-    rr_a->inputLen          = -1;
-    rr_a->max_start         = -1;
-    rr_a->max_end           = -1;
-    rr_a->actual_repeat_len = -1;
-    rr_a->rep_period        = -1;
-    rr_a->actual_rep_period = -1;
-    strcpy( rr_a->string, "");
-    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = -1; }
-    rr_a->Num_freq_unit     = -1;
-    rr_a->Num_matches       = -1;
-    rr_a->Num_mismatches    = -1;
-    rr_a->Num_insertions    = -1;
-    rr_a->Num_deletions     = -1;
-    rr_a->Kmer              = -1;
-    rr_a->ConsensusMethod     = -1;
+    return(max_rr);
 }
 
 void handle_one_read(char *readID, int inputLen, int read_cnt){
     
     // Put into repeats_in_all_reads any repeat instance that may not meet the conditions on MIN_REP_LEN and MIN_MATCH_RATIO. Remove unqualified instances later.
-    int max_matches = -1;  // Initial value
-    char message[1000] = "";
+    
     repeat_in_read max_rr, rr;
     
+    // Set max_rr to the NULL value
+    max_rr.Num_matches = -1;
+    max_rr.actual_repeat_len = 0;
+    
     for(int k = minKmer; k <= maxKmer; k++){
-        clear_rr(&rr);
-        handle_one_read_with_a_Kmer(readID, inputLen, k, &rr);
-        
-        if( max_matches < rr.Num_matches ){
-            max_matches = rr.Num_matches;
-            max_rr = rr;
+        rr = handle_one_read_with_a_Kmer(readID, inputLen, k);
+        //print_one_repeat_in_read(rr);
+        if( better_rr(&max_rr, &rr) == 1){
+            substitute_rr(&max_rr, &rr);   // max_rr = rr;
             max_rr.ID = read_cnt;
         }
+        // rep_period is more accurate than actual_rep_period is for some kmer instances.
+        if(     (max_rr.rep_period < 8   && k == maxKmer_lt_8)
+           ||   (max_rr.rep_period < 20  && k == maxKmer_lt_20)
+           ||   (max_rr.rep_period < 70  && k == maxKmer_lt_70)
+           ){
+            break;
+        }
     }
-    repeats_in_all_reads[max_rr.ID] = max_rr;
+    substitute_rr( &repeats_in_all_reads[max_rr.ID], &max_rr);
 }
 

@@ -50,27 +50,32 @@ int main(int argc, char *argv[])
     int read_cnt;
     if(strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "-r") == 0){
         gettimeofday(&s, NULL);
-        
         inputFile = argv[2];
-        fprintf(stderr, "The input file name is %s.\n", inputFile);
-        
         read_cnt = handle_one_file(inputFile);
-        
-        fprintf(stderr, "Number of all reads in the input fasta file is %i.\n", read_cnt);
-        
         gettimeofday(&e, NULL);
+        
+#ifdef PRINT_FILE_ETIME
+        fprintf(stderr, "The input file name is %s.\n", inputFile);
+        fprintf(stderr, "Number of all reads in the input fasta file is %i.\n", read_cnt);
         fprintf(stderr, "time for finding repeats = %lf\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+#endif
     }
     
     // Remove unqualied reads from repeats_in_all_reads
     int j = 0;
     for(int i=0; i<read_cnt; i++){
         repeat_in_read aRR = repeats_in_all_reads[i];
-        float match_ratio = (float)aRR.Num_matches / aRR.actual_repeat_len;
-        
+        float match_ratio;
+        if(aRR.actual_repeat_len > 0){
+            match_ratio = (float)aRR.Num_matches / aRR.actual_repeat_len;
+        }else{
+            match_ratio = 0;
+        }
         if(MIN_REP_LEN < (aRR.actual_rep_period * aRR.Num_freq_unit)  &&
-           MIN_MATCH_RATIO < match_ratio && 1 < aRR.Num_freq_unit )
+           MIN_MATCH_RATIO < match_ratio &&
+           1 < aRR.Num_freq_unit )
         {
+            // Remove unqualied reads from repeats_in_all_reads
             // This overwrite is safe as j <= i.
             repeats_in_all_reads[j] = repeats_in_all_reads[i];
             repeats_in_all_reads[j].ID = j;
@@ -100,11 +105,12 @@ int main(int argc, char *argv[])
     
     if(strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "-c") == 0){
         gettimeofday(&s, NULL);
-        
         k_means_clustering(read_cnt, pretty_print);
-        
         gettimeofday(&e, NULL);
+        
+#ifdef PRINT_FILE_ETIME
         fprintf(stderr, "time for clustering repeats = %lf\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+#endif
     }
     
     //  Free space for global variables in the heap

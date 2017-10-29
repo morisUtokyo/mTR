@@ -1,8 +1,5 @@
 //
 //  wrap_around_DP.c
-//  
-//
-//  Created by Shinichi Morishita on 2017/10/06.
 //
 
 #include <stdio.h>
@@ -11,16 +8,12 @@
 #include <string.h>
 #include "mTR.h"
 
-
-// We used a global alignment algorithm in place of a local alignment that outpurs shorter alignments.
-void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
-                    int *return_rep_len, int *return_freq_unit,
-                    int *return_matches, int *return_mismatches,
-                    int *return_insertions, int *return_deletions){
+// We can select either local or global alignment by setting mode to Local_alignment or Global_alignment.
+// We are using local alignment as default.
+void wrap_around_DP_sub(int *rep_unit, int unit_len, int *rep, int rep_len, repeat_in_read *rr, int mode){
     
     int i, j;
     int next = unit_len+1;
-    
     
 #ifdef DEBUG_algorithm_wrap_around
     printf("unit_len = %i, \t rep_len = %i\n", unit_len, rep_len);
@@ -28,7 +21,13 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
     
     // Initialization
     for(j=0; j<=rep_len; j++){   // Scan rep_unit
-        WrapDP[next*0 + j] = INDEL_PENALTY * j; // global alignment
+        if(mode == Global_alignment){
+            // global alignment
+            WrapDP[next*0 + j] = INDEL_PENALTY * j;
+        }else{
+            // local alignment
+            WrapDP[next*0 + j] = 0;
+        }
     }
     int max_wrd = 0;
     int max_i = 0;
@@ -39,15 +38,30 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
                 WrapDP[next*i + j] =
                 WrapDP[next*(i-1) + j-1] + MATCH_GAIN;
             }else{
-                if(j == 1){
-                    WrapDP[next*i + j] = MAX(
-                                         WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
-                                         WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+                if(mode == Global_alignment){
+                    // global alignment
+                    if(j == 1){
+                        WrapDP[next*i + j] = MAX(
+                                  WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
+                                  WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+                    }else{
+                        WrapDP[next*i + j] = MAX( MAX(
+                                  WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
+                                  WrapDP[next*i + j-1]     + INDEL_PENALTY),
+                                  WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+                    }
                 }else{
-                    WrapDP[next*i + j] = MAX( MAX(
-                                          WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
-                                          WrapDP[next*i + j-1]     + INDEL_PENALTY),
-                                          WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+                    // local alignment
+                    if(j == 1){
+                        WrapDP[next*i + j] = MAX( MAX( 0,
+                                  WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY),
+                                  WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+                    }else{
+                        WrapDP[next*i + j] = MAX( MAX( MAX( 0,
+                                  WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY),
+                                  WrapDP[next*i + j-1]     + INDEL_PENALTY),
+                                  WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+                    }
                 }
             }
             if(max_wrd < WrapDP[next*i+j]){
@@ -73,7 +87,6 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
 #endif
     
     // trace back
-    
     int Num_matches = 0;
     int Num_mismatches = 0;
     int Num_insertions = 0;
@@ -82,13 +95,12 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
     
     i = max_i;
     j = max_j;
+    if(j == 0){ j = unit_len; }
     
-    if(j == 0){
-        j = unit_len;
-    }
-    
-    
-    while(i > 0){                 // global alignment
+    while(i > 0){
+        if( mode == Local_alignment && max_wrd <= 0){ break; }
+        // If we use local alignment, exit here when max_wrd is equal to or less than 0.
+        
         if( i > 0 && j > 0 && max_wrd == WrapDP[next*(i-1) + j-1]+ MATCH_GAIN){
             max_wrd -= MATCH_GAIN;
             i--; j--;
@@ -116,14 +128,13 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
             j = unit_len;
         }
     }
-    int actual_repeat_len = max_i - i;
-    
-    *return_rep_len     = actual_repeat_len;
-    *return_freq_unit   = (int)Num_scanned_unit/unit_len;
-    *return_matches     = Num_matches;
-    *return_mismatches  = Num_mismatches;
-    *return_insertions  = Num_insertions;
-    *return_deletions   = Num_deletions;
+    int actual_repeat_len   = max_i - i;
+    rr->actual_repeat_len   = actual_repeat_len;
+    rr->Num_freq_unit       = (int)Num_scanned_unit/unit_len;
+    rr->Num_matches         = Num_matches;
+    rr->Num_mismatches      = Num_mismatches;
+    rr->Num_insertions      = Num_insertions;
+    rr->Num_deletions       = Num_deletions;
     
 #ifdef DEBUG_algorithm_wrap_around
     printf("Repeat length =%i\t Matches = %1.3f\t Mismatches = %1.3f\t Insertions = %1.3f\t Deletions = %1.3f\t max value = %i\n",
@@ -137,3 +148,9 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
     
 }
 
+void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len, repeat_in_read *rr){
+
+    int mode = Wrap_around_DP_mode;   // Set to either global_alignment or local_alignment in mTR.h
+    wrap_around_DP_sub(rep_unit, unit_len, rep, rep_len, rr, mode);
+    
+}

@@ -1,9 +1,6 @@
 //
 //  print_one_repeat.c
 //  
-//
-//  Created by Shinichi Morishita on 2017/10/06.
-//
 
 #include <stdio.h>
 #include <stdlib.h>
