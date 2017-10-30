@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
         }
         if(MIN_REP_LEN < (aRR.actual_rep_period * aRR.Num_freq_unit)  &&
            MIN_MATCH_RATIO < match_ratio &&
+           2 <= aRR.actual_rep_period &&
            1 < aRR.Num_freq_unit )
         {
             // Remove unqualied reads from repeats_in_all_reads
