@@ -1,4 +1,4 @@
-# mTR
+# mTR  (meetup Tandem Repeats!)
 Use Makefile to generate an executable file "mTR".
 
 Execution
