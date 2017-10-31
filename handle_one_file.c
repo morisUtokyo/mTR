@@ -86,7 +86,7 @@ int handle_one_file(char *inputFile){
                 read_cnt++;
             }
             // Feed the header of the read.
-            for(i=1; s[i]!='\0' && s[i]!='\n'; i++){ readID[i-1] = s[i]; }
+            for(i=1; s[i]!='\0' && s[i]!='\n' && i<MAX_ID_LENGTH; i++){ readID[i-1] = s[i]; }
             readID[i-1] = '\0';
             cnt = 0;
         }else{

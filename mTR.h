@@ -63,7 +63,7 @@ int *WrapDP;
 // 2D space for Wrap-around global alignment DP for handling tandem repeats. The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 
 //  Arrays for storing results
-#define MAX_ID_LENGTH 200
+#define MAX_ID_LENGTH 400 //200
 #define ProgressiveMultipleAlignment 0
 #define DeBruijnGraphSearch 1
 
