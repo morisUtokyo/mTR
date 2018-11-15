@@ -1,18 +1,15 @@
 //
 //  handle_one_read.c
 //  
+//
+//  Created by Shinichi Morishita
+//
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include "mTR.h"
-
-// Probability of x in normal distribution
-float p_nd(float x, float avg, float sd){
-    float p = (float)exp( -pow(x-avg,2) / (2 * pow(sd,2) ) ) / sqrt( 2 * M_PI * pow(sd,2) );
-    return(p);
-}
 
 void print_4_decimals(int val, int len){
     if(len > 0){
@@ -23,6 +20,32 @@ void print_4_decimals(int val, int len){
             case 2: printf("G"); break;
             case 3: printf("T"); break;
             default: fprintf(stderr, "fatal input char %i", val%4); exit(EXIT_FAILURE);
+        }
+    }
+}
+
+char dec2char(int val){
+    char return_char;
+    switch(val){
+        case 0: return_char = 'A'; break;
+        case 1: return_char = 'C'; break;
+        case 2: return_char = 'G'; break;
+        case 3: return_char = 'T'; break;
+        default: fprintf(stderr, "fatal input char %i", val); exit(EXIT_FAILURE);
+    }
+    return(return_char);
+}
+
+
+void print_4_decimal_array(int* val, int len, char *return_string){
+    strcpy(return_string, "");
+    for(int i=0; i<len; i++){
+        switch(val[i]){
+            case 0: strcat(return_string, "A"); break;
+            case 1: strcat(return_string, "C"); break;
+            case 2: strcat(return_string, "G"); break;
+            case 3: strcat(return_string, "T"); break;
+            default: fprintf(stderr, "fatal error: input char %i", val[i]); exit(EXIT_FAILURE);
         }
     }
 }
@@ -38,325 +61,393 @@ void freq_2mer_array(int* val, int len, int *freq_2mer){
     freq_2mer[val[len-1]*4+val[0]]++;
 }
 
-// Return 1 if max_rr < rr, 0 otherwise.
-int better_rr(repeat_in_read *max_rr, repeat_in_read *rr){
-    
-    float max_rr_match_ratio = 0;
-    if(max_rr->actual_repeat_len > 0){
-        max_rr_match_ratio = (float)max_rr->Num_matches / max_rr->actual_repeat_len;
-    }
-    float rr_match_ratio = 0;
-    if(rr->actual_repeat_len > 0){
-        rr_match_ratio = (float)rr->Num_matches / rr->actual_repeat_len;
-    }
-    
-    if( MIN_MATCH_RATIO < rr_match_ratio &&
-       max_rr_match_ratio < rr_match_ratio &&
-       max_rr->Num_matches < rr->Num_matches &&
-       MIN_REP_LEN < (rr->actual_rep_period * rr->Num_freq_unit) &&
-       1 < rr->Num_freq_unit )
-    {
-        return(1);
-    }else{
-        return(0);
-    }
+
+void clear_rr(repeat_in_read *rr_a){
+    rr_a->ID                = -1;
+    strcpy( rr_a->readID, "");
+    rr_a->inputLen          = -1;
+    rr_a->max_start         = -1;
+    rr_a->max_end           = -1;
+    rr_a->actual_repeat_len = -1;
+    rr_a->rep_period        = -1;
+    rr_a->actual_rep_period = -1;
+    strcpy( rr_a->string, "");
+    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = -1; }
+    rr_a->Num_freq_unit     = -1;
+    rr_a->Num_matches       = -1;
+    rr_a->Num_mismatches    = -1;
+    rr_a->Num_insertions    = -1;
+    rr_a->Num_deletions     = -1;
+    rr_a->Kmer              = -1;
+    rr_a->ConsensusMethod     = -1;
 }
 
-void substitute_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
-    rr_a->ID                = rr_b->ID;
-    strcpy( rr_a->readID, rr_b->readID);
-    rr_a->inputLen          = rr_b->inputLen;
-    rr_a->max_start         = rr_b->max_start;
-    rr_a->max_end           = rr_b->max_end;
-    rr_a->actual_repeat_len = rr_b->actual_repeat_len;
-    rr_a->rep_period        = rr_b->rep_period;
-    rr_a->actual_rep_period = rr_b->actual_rep_period;
-    rr_a->Num_freq_unit     = rr_b->Num_freq_unit;
-    rr_a->Num_matches       = rr_b->Num_matches;
-    rr_a->Num_mismatches    = rr_b->Num_mismatches;
-    rr_a->Num_insertions    = rr_b->Num_insertions;
-    rr_a->Num_deletions     = rr_b->Num_deletions;
-    rr_a->Kmer              = rr_b->Kmer;
-    rr_a->ConsensusMethod   = rr_b->ConsensusMethod;
-    strcpy( rr_a->string, rr_b->string);
-    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = rr_b->freq_2mer[i]; }
-}
-
-repeat_in_read handle_one_read_with_a_Kmer( char *readID, int inputLen, int Kmer ){
-    int pow4k_1 = 1;    // 4^{k-1}  e.g., 4^(4-1) = 64
-    for(int i=0; i<(Kmer-1); i++){ pow4k_1 = 4 * pow4k_1; }
-    int pow4k = 4 * pow4k_1;  // 4 * 4^{k-1} = 4^k
-    
-    // Encode the raw input string into 4 decimals of length k
-    for(int i=0; i<inputLen; i++){
-        inputString[i] = orgInputString[i];
-    }
-    int tmp = 0;
-    for(int i=0; i<(Kmer-1); i++){
-        tmp = 4 * tmp + inputString[i];  // compute 4 decimal of length k-1
-    }
-    for(int i=0; i<(inputLen-Kmer+1); i++){
-        inputString[i] = 4 * tmp + inputString[i+Kmer-1];
-        tmp = inputString[i] % pow4k_1; //　remainder, compute 4 decimal of length k-1
-        if(tmp < 0){
-            fprintf(stderr, "fatal error at %i\t %i \t%i\n", i, inputString[i], pow4k_1);
-            exit(EXIT_FAILURE);
-        }
-    }
-    inputLen = inputLen - Kmer + 1;
-    
-#ifdef DEBUG_IO
-    printf("Input length of k decimals = %i\n", inputLen);
-    for(int i=0; i<inputLen; i++){
-        printf("%i ", inputString[i]);
-    }
-    printf("\n");
-#endif
+void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputLen, int Kmer, repeat_in_read *rr ){
     
     //---------------------------------------------------------------------------
+    // In the range [max_start, max_end],
+    // compute the representative unit string by using a progressive multiple alignment or
+    // by traversing the De Bruijn graph of all k-mers in a greedy manner
+    //---------------------------------------------------------------------------
+    
     // Sort k-mers using counting sort and store the positions of k-mers in sortedString
-    //---------------------------------------------------------------------------
+    int pow4k = 1;    // 4^{k}  e.g., 4^(4) = 256
+    for(int i=0; i<Kmer; i++){ pow4k = 4 * pow4k;}
+    int pow4k_1 = pow4k/4;
     for(int i = 0; i < pow4k; i++){ count[i] = 0;}  // Initialization
-    for(int i = 0; i < inputLen; i++){ count[ inputString[i] ]++; }    // Perform counting
+    for(int i = max_start; i <= max_end; i++){ count[ inputString[i] ]++; }    // Perform counting
     for(int i = 1; i < pow4k; i++){ count[i] = count[i-1] + count[i]; }
     for(int i=0; i<MAX_INPUT_LENGTH; i++){ sortedString[i] = 0; } // Initialization
-    for(int i=inputLen-1; 0 <= i; i--){
+    for(int i=max_end; max_start <= i; i--){
         sortedString[ --count[inputString[i]] ] = i;
     }
-    
-#ifdef DEBUG_sorting
-    printf("Sorted \n");
-    for(int i=0; i<inputLen; i++){
-        printf("%i ", sortedString[i]);
-    }
-    printf("\n");
-    
-    printf("4dec\t counts\n");
-    for(i=1; i<pow4k; i++){
-        printf("%i\t %i\n", i, count[i] );
-    }
-#endif
-    
-    int start, end;
-    
-#ifdef DEBUG_algorithm
-    printf("Display M(i,j) \n");
-    int* oneRow = (int *)malloc( sizeof(int) * inputLen);
-    for(int i=0; i<inputLen; i++){
-        for(int j=0; j<inputLen; j++){
-            oneRow[j]=0;
-        }  // Initialize one row
-        start = count[ inputString[i] ];
-        if(inputString[i] == pow4k-1){
-            end = inputLen;
-        }else{
-            end   = count[ inputString[i]+1 ];
-        }
-        for(int j = start; j < end; j++){
-            oneRow[ sortedString[j] ] = 1;
-        }
-        for(int j=0; j<inputLen; j++){
-            printf("%i\t", oneRow[j]);
-        }
-        printf("\n");
-    }
-    free(oneRow);
-#endif
-    
-    //---------------------------------------------------------------------------
-    // Compute the periodicity with the maximum count in the input string
-    //---------------------------------------------------------------------------
     
     // Initialization
     for(int i = 0; i < MAX_PERIOD; i++){
         count_period_all[i] = 0;
     }
-    for(int i=0; i < inputLen; i++){
-        start = count[inputString[i]];
+    for(int j=0; j<MAX_INPUT_LENGTH; j++){
+        freq_interval_len[j] = 0;
+    }
+    for(int i=max_start; i <= max_end; i++){
+        int local_start = count[inputString[i]];
+        int local_end;
         if(inputString[i] == pow4k-1){
-            end = inputLen;
+            local_end = inputLen;
         }else{
-            end = count[ inputString[i]+1 ];
+            local_end = count[ inputString[i]+1 ];
         }
-        for(int j = start; j < (end-1); j++){
+        freq_interval_len[i] = (double)(local_end - local_start);
+        
+        for(int j = local_start; j < (local_end - 1); j++){
             int aPeriod = sortedString[j+1] - sortedString[j];
             if(aPeriod < MAX_PERIOD){
                 count_period_all[ aPeriod ]++;
             }
         }
     }
+    //　Locate the initial position (k-mer) with the maximum frequency
+    int max_pos = max_start;
+    int max_freq   = (int)freq_interval_len[max_pos];
+    for(int j=max_start; j <= max_end; j++){
+        if(max_freq < freq_interval_len[j]){
+            max_pos  = j;
+            max_freq = (int)freq_interval_len[max_pos];
+        }
+    }
+    // Compute repeat period with the maximum frequency
     int rep_period = 2;
-    int max_freq = 0;
+    max_freq = 0;
     for(int p = 2; p < MAX_PERIOD; p++){
         if(max_freq < count_period_all[p]){
             rep_period = p;
             max_freq = count_period_all[p];
         }
     }
-    
-    //---------------------------------------------------------------------------
-    //  Compute the frequency distribution of interval lengths by counting sort
-    //---------------------------------------------------------------------------
-    
-    for(int j=0; j<MAX_INPUT_LENGTH; j++){  // Initialization
-        freq_interval_len[j] = 0;
-    }
-    
-    int band_width = rep_period * 10;  // 10 performed best among {3,5,10,20,50}
-    // To make sure the independence of the input length, examine the band within 10 times the estimated repeat unit length from the diagonal
-    
-    for(int j=0; j<inputLen; j++){
-        start = count[ inputString[j] ];
-        if(inputString[j] == pow4k-1){
-            end = inputLen;
-        }else{
-            end = count[ inputString[j]+1 ];
-        }
-
-        int cnt = 0;
-        for(int h = start; h < end; h++){
-            if( (j - band_width) <= sortedString[h] && sortedString[h] <= (j + band_width)){
-                cnt++;
-            }
-        }
-        freq_interval_len[j] = (float)(cnt - 1);
-        // freq_interval_len[j] = (float)(end - start) - 1;
-        // Remove the k-mer at the j-th position and reduce the frequency by 1
-    }
-    
-    // Assuming the random distribution of k-mers, computethe averaga and standard deviation
-    float p = (float)1/pow4k;
-    float random_avg = 2 * band_width * p;
-    float random_sd  = sqrtf(2 * band_width * p * (1-p));
-    
-    for(int j=0; j <inputLen; j++){
-        /*
-         // Probablistic model did not perform well
-        double p_value = p_nd( freq_interval_len[j], random_avg, random_sd);
-        double p_threshold = 0.05;
-        
-        if(p_value < (p_threshold / inputLen) ){  // Bonferroni correction as we examine "inputLen" positions.
-        //if(p_value < p_threshold  ){
-            freq_interval_len[j] = Kmer;
-        }else{
-            freq_interval_len[j] = -1;
-        }
-         */
-        
-        freq_interval_len[j] -= (random_avg + 1 * random_sd);
-                    // best prediction among {0,1,2,3}
-    }
-
-    //---------------------------------------------------------------------------
-    //  Determine a highly repetitive region as an optimal range using Kadane's algorithm
-    //---------------------------------------------------------------------------
-
-    int max_start, max_end;
-
     // Initialization
-    for(int j=0; j<MAX_INPUT_LENGTH; j++){
-        Kadane_val[j] = 0;
-        max_starts[j] = 0;
+    int actual_rep_period;
+    for(int i = 0; i < MAX_PERIOD; i++){
+        rep_unit_string[i] = 0;
     }
-    for(int j=0; j<inputLen; j++){
-        if(j == 1){
-            Kadane_val[j] = freq_interval_len[j];
-            max_starts[j] = j;
-        }else{
-            if(freq_interval_len[j] < Kadane_val[j-1]+freq_interval_len[j]){
-                Kadane_val[j] = Kadane_val[j-1]+freq_interval_len[j];
-                max_starts[j] = max_starts[j-1];
-            }else{
-                Kadane_val[j] = freq_interval_len[j];
-                max_starts[j] = j;
-            }
-        }
-    }
-    // backtracing
-    float max_val = Kadane_val[0];
-
-    max_end = 0;
-    for(int j=1; j<inputLen; j++){
-        if(max_val < Kadane_val[j]){
-            max_val = Kadane_val[j];
-            max_end = j;
-        }
-    }
-    max_start = max_starts[max_end];
     
-
-#ifdef DEBUG_algorithm_Kadane
-    printf("position\tfreq\n");
-    for(int j=max_start; j<max_end; j++){
-        printf("%i\t%i\n", j, (int)freq_interval_len[j]);
-    }
-    printf("\n");
-#endif
-
+    // Traverse the De Bruijn graph of all k-mers in a greedy manner
+    actual_rep_period =
+    search_De_Bruijn_graph(max_start, max_end, max_pos, rep_period, inputLen, pow4k_1);
     
-    //---------------------------------------------------------------------------
-    // Compute the representative unit string by using a progressive multiple alignment or
-    // by traversing the De Bruijn graph of all k-mers in a greedy manner
-    //---------------------------------------------------------------------------
-
-    repeat_in_read tmp_rr;
-    strcpy( tmp_rr.readID, readID);
-    tmp_rr.inputLen  = inputLen;
-    tmp_rr.max_start = max_start;
-    tmp_rr.max_end   = max_end;
-    tmp_rr.rep_period= rep_period;
-    tmp_rr.Kmer      = Kmer;
-    tmp_rr.actual_repeat_len = 0;
-    tmp_rr.Num_freq_unit     = 0;
-
-    repeat_in_read max_rr, rr;
-    substitute_rr(&rr, &tmp_rr);
-    
-    // Set max_rr to the NULL value
-    max_rr.Num_matches = -1;
-    max_rr.actual_repeat_len = 0;
-    
-    // First, traverse the De Bruijn graph of all k-mers in a greedy manner
-    search_De_Bruijn_graph(pow4k, &tmp_rr, &rr);
-    if( better_rr(&max_rr, &rr) == 1 ){
-        substitute_rr(&max_rr, &rr);
+    int ConsensusMethod;
+    //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
+    if(actual_rep_period > 0){
+        // A De Bruijin graph search is successful.
+        ConsensusMethod = DeBruijnGraphSearch;
     }else{
-#ifdef USE_an_additional_progressive_multiple_alignment
-        // If De Bruijn search fails, use a progressive multiple alignment
-        progressive_multiple_alignment(pow4k, &tmp_rr, &rr);
-        if( better_rr(&max_rr, &rr) == 1){
-            substitute_rr(&max_rr, &rr);
-        }
-#endif
+        // If the De Bruijn graph search fails, try a progressive  multiple alignment.
+        ConsensusMethod = ProgressiveMultipleAlignment;
+        actual_rep_period = progressive_multiple_alignment( max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
     }
-    return(max_rr);
+    
+    //---------------------------------------------------------------------------
+    // Compute the accuracy of the representative unit string by wrap-around DP
+    //---------------------------------------------------------------------------
+    
+    if(actual_rep_period * (max_end - max_start + 1) > WrapDPsize){
+        fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
+        clear_rr(rr);
+    }else if(actual_rep_period > 0){
+        int actual_repeat_len, Num_freq_unit, Num_matches, Num_mismatches, Num_insertions, Num_deletions;
+        
+        wrap_around_DP(rep_unit_string,
+                       actual_rep_period,
+                       &orgInputString[max_start],
+                       (max_end - max_start + 1),
+                       &actual_repeat_len,  &Num_freq_unit,
+                       &Num_matches,        &Num_mismatches,
+                       &Num_insertions,     &Num_deletions);
+        
+        strcpy( rr->readID, readID);
+        rr->inputLen           = inputLen;
+        rr->max_start          = max_start;
+        rr->max_end            = max_end;
+        rr->rep_period         = rep_period;
+        rr->actual_rep_period  = actual_rep_period;
+        rr->Kmer      = Kmer;
+        rr->Num_freq_unit      = 0;
+        rr->ConsensusMethod    = ConsensusMethod;
+        rr->Num_freq_unit      = Num_freq_unit;
+        rr->Num_matches        = Num_matches;
+        rr->Num_mismatches     = Num_mismatches;
+        rr->Num_insertions     = Num_insertions;
+        rr->Num_deletions      = Num_deletions;
+        
+        rr->actual_repeat_len = actual_repeat_len;
+        print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
+        freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
+    }
 }
 
-void handle_one_read(char *readID, int inputLen, int read_cnt){
+void init_inputString(int k, int inputLen){
+    // Encode the raw input string into 4 decimals of length k
+    int pow4k, pow4k_1;
+    pow4k_1 = 1;    // 4^{k-1}  e.g., 4^(4-1) = 64
+    for(int i=0; i<(k-1); i++){
+        pow4k_1 = 4 * pow4k_1;
+    }
+    for(int i=0; i<inputLen; i++){
+        inputString[i] = orgInputString[i];
+    }
+    int tmp = 0;
+    for(int i=0; i<(k-1); i++){
+        tmp = 4 * tmp + inputString[i];  // compute 4 decimal of first k-1 letters
+    }
+    for(int i=0; i<(inputLen-k+1); i++){
+        inputString[i] = 4 * tmp + inputString[i+k-1];
+        tmp = inputString[i] % pow4k_1; //　remainder, compute 4 decimal of length k-1
+        if(tmp < 0){
+            fprintf(stderr, "fatal error at %i\t %i \t%i\n", i, inputString[i], pow4k_1);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+
+void find_tandem_repeat(int max_start, int max_end, char *readID, int inputLen,  repeat_in_read *rr, repeat_in_read *tmp_rr ){
     
-    // Put into repeats_in_all_reads any repeat instance that may not meet the conditions on MIN_REP_LEN and MIN_MATCH_RATIO. Remove unqualified instances later.
+    // Policy of minimum description length
+    // A shorter unit is better than a longer one.
+    float max_match_ratio = -1;
+    int min_period = MAX_PERIOD;
     
-    repeat_in_read max_rr, rr;
-    
-    // Set max_rr to the NULL value
-    max_rr.Num_matches = -1;
-    max_rr.actual_repeat_len = 0;
+    clear_rr(tmp_rr);  // clear the space for the result
     
     for(int k = minKmer; k <= maxKmer; k++){
-        rr = handle_one_read_with_a_Kmer(readID, inputLen, k);
-        //print_one_repeat_in_read(rr);
-        if( better_rr(&max_rr, &rr) == 1){
-            substitute_rr(&max_rr, &rr);   // max_rr = rr;
-            max_rr.ID = read_cnt;
+        clear_rr(rr);
+        init_inputString(k, inputLen);
+        find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
+        float tmp_match_ratio =  (float)rr->Num_matches/rr->actual_repeat_len;
+        if(
+           // Allow a longer period that doubles the minimum period found
+           rr->actual_rep_period < min_period * 2 &&
+           max_match_ratio < tmp_match_ratio &&
+           MIN_MATCH_RATIO < tmp_match_ratio &&
+           MIN_NUM_FREQ_UNIT < rr->Num_freq_unit)
+        {
+            max_match_ratio = tmp_match_ratio;
+            min_period = rr->actual_rep_period;
+            *tmp_rr = *rr;   // RRs[1] contains the temporally maximum value.
         }
-        // rep_period is more accurate than actual_rep_period is for some kmer instances.
-        if(     (max_rr.rep_period < 8   && k == maxKmer_lt_8)
-           ||   (max_rr.rep_period < 20  && k == maxKmer_lt_20)
-           ||   (max_rr.rep_period < 70  && k == maxKmer_lt_70)
-           ){
+
+    }
+    *rr = *tmp_rr;
+}
+
+
+double DI_index(int *v0, int *v1, int *v2, int k){
+    int pow4k = 1;
+    for(int i=0; i<k; i++){
+        pow4k = 4 * pow4k;
+    }
+    double s_0 = 0;
+    double s_1 = 0;
+    double s_2 = 0;
+    double q_0 = 0;
+    double q_1 = 0;
+    double q_2 = 0;
+    double cov_01 = 0;
+    double cov_12 = 0;
+    for(int i=0; i<pow4k; i++){
+        s_0    += v0[i];
+        s_1    += v1[i];
+        s_2    += v2[i];
+        q_0    += v0[i] * v0[i];
+        q_1    += v1[i] * v1[i];
+        q_2    += v2[i] * v2[i];
+        cov_01 += v0[i] * v1[i];
+        cov_12 += v1[i] * v2[i];
+    }
+    double sd_0    = sqrt(q_0 * pow4k - s_0 * s_0);
+    double sd_1    = sqrt(q_1 * pow4k - s_1 * s_1);
+    double sd_2    = sqrt(q_2 * pow4k - s_2 * s_2);
+    
+    // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient#For_a_sample
+    double P_01, P_12;
+    if(sd_0*sd_1 > 0){
+        P_01 = (cov_01 * pow4k - s_0 * s_1)/(sd_0 * sd_1);
+    }else{
+        P_01 = 0;
+    }
+    if(sd_1*sd_2 > 0){
+        P_12 = (cov_12 * pow4k - s_1 * s_2)/(sd_1 * sd_2);
+    }else{
+        P_12 = 0;
+    }
+    double DI = P_12 - P_01;
+    return(DI);
+}
+
+int local_minimum(double* val, int pos, int left, int right, int window){
+    int answer = 1;
+    int left_i = left;
+    if(left_i < pos - window){
+        left_i = pos - window;
+    }
+    int right_i = right;
+    if(pos + window < right_i){
+        right_i = pos + window;
+    }
+    for(int i=left_i; i < right_i; i++){
+        if(val[i] < val[pos]){
+            answer = 0;
             break;
         }
     }
-    substitute_rr( &repeats_in_all_reads[max_rr.ID], &max_rr);
+    return(answer);
 }
+
+void fill_directional_index(int inputLen, int w, int k){
+    // initialized inputString with a given value for k
+    init_inputString(k, inputLen);
+    // initialize directional _index
+    for(int i=0; i<MAX_INPUT_LENGTH; i++){
+        directional_index[i] = 0;
+    }
+    // initialize vectors
+    for(int i=0; i < 4 * BLK; i++){
+        vector0[i] = 0; vector1[i] = 0; vector2[i] = 0;
+    }
+    // Assume that vector0, the window ending at (i-1), is the empty vector filled with 0
+    for(int i=0; i < w && i < (inputLen - w - k + 1); i++){
+        vector1[ inputString[i] ]++;
+        vector2[ inputString[i + w] ]++;
+    }
+    // Shift vector0/1/2 starting from i=1 can calculate directional indexes
+    for(int i=0; i < (inputLen - w - k + 1); i++){
+        if(0 <= i-w){
+            vector0[ inputString[i-w] ]--;
+        }
+        vector0[ inputString[i] ]++;
+        vector1[ inputString[i] ]--;
+        vector1[ inputString[i + w] ]++;
+        vector2[ inputString[i + w] ]--;
+        if(w*2 < inputLen - k + 1){
+            vector2[ inputString[i + w*2] ]++;
+        }
+        // starting index at the i-th position
+        directional_index[i] = (double)DI_index(vector0, vector1, vector2, k);
+        //printf("%c\t%0.2f ", dec2char(orgInputString[i]), directional_index[i]);
+    }
+}
+
+int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR){
+    
+    int found = 0;
+    int max_pos = search_pos;
+    double max_DI = 0;
+    int min_pos = search_pos;
+    double min_DI = 0;
+    for(int i=search_pos; i < (inputLen - w - k + 1); i++){
+        if(max_DI < directional_index[i]){
+            max_pos = i;
+            max_DI  = directional_index[max_pos];
+        }
+        if(directional_index[i] < min_DI){
+            min_pos = i;
+            min_DI  = directional_index[min_pos];
+        }
+        // Fix the range [max_pos, min_pos+w] if min_DI is a local minimum with the window of length w
+        // The repeat length must be greater than w
+        int window;
+        if(print_multiple_TR == 1){
+            window = w;
+        }else{
+            window = inputLen;  // Need to accelate local mimumum search
+        }
+        
+        if( max_pos + w <= min_pos &&
+           local_minimum(directional_index, i, 0, inputLen, window) == 1)
+        {
+            //printf("w = %i\tk = %i\trange = [%i,%i]\t%0.2f\t%0.2f\n", w, k, max_pos, min_pos+w, max_DI, min_DI);
+            *max_start = max_pos;
+            *max_end   = min_pos + w;
+            *max_DI_answer = max_DI;
+            found = 1;
+            break;  // report the first range found
+        }
+    }
+    return(found);
+}
+
+void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR){
+    
+    int search_pos = 0;
+    while(search_pos < inputLen){
+        double max_measure = 0;
+        int found = 0;
+        int max_w, max_k, tmp_start, tmp_end, max_start, max_end;
+        double tmp_DI = 0;
+        double max_DI = 0;
+        
+        int w0=64;
+        for(int k=3; k<=5; k++){  // w0 = 4^k
+            int w = w0/2;
+            for(int i=0; i<3; i++){ // 3 windows
+                fill_directional_index(inputLen, w, k);
+                int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
+                if(found_one == 1 && max_measure < tmp_DI) {
+                    max_measure = tmp_DI;
+                    max_w = w;
+                    max_k = k;
+                    max_start = tmp_start;
+                    max_end   = tmp_end;
+                    max_DI    = tmp_DI;
+                    found = 1;
+                }
+                w = w * 2;
+            }
+            w0 = w0 * 4;
+        }
+
+        if(found){
+#ifdef DEBUG_segmentation_hault
+            fprintf(stderr, "w=%i\tk=%i\tmax_start=%i\tmax_end=%i\tsearch_pos=%i\n", max_w, max_k, max_start, max_end, search_pos);
+#endif
+            fill_directional_index(inputLen, max_w, max_k);
+            find_tandem_repeat(max_start, max_end, readID, inputLen, &RRs[0], &RRs[1]);
+            
+            if(RRs[0].actual_repeat_len > 0){
+#ifdef DEBUG_window_kmer
+                printf("w=%i\tk=%i\t", max_w, max_k);
+#endif
+                print_one_repeat_in_read(RRs[0]);
+            }
+            if(print_multiple_TR == 1){
+                search_pos = max_end;
+            }else{
+                break;
+            }
+        }else{
+            break;
+        }
+
+    }
+}
+
 

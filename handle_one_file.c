@@ -1,5 +1,8 @@
-//
+
 //  handle_one_file.c
+//  
+//
+//  Created by Shinichi Morishita
 //
 
 #include <stdio.h>
@@ -14,26 +17,28 @@ void free_global_variables_and_exit(){
     if(inputString       != NULL){ free(inputString); }
     if(count             != NULL){ free(count); }
     if(sortedString      != NULL){ free(sortedString); }
+    if(RRs               != NULL){ free(RRs);}
+    if(directional_index != NULL){ free(directional_index); }
+    if(vector0           != NULL){ free(vector0); }
+    if(vector1           != NULL){ free(vector1); }
+    if(vector2           != NULL){ free(vector2); }
     if(freq_interval_len != NULL){ free(freq_interval_len); }
-    if(Kadane_val        != NULL){ free(Kadane_val); }
-    if(max_starts        != NULL){ free(max_starts); }
     if(count_period_all  != NULL){ free(count_period_all); }
+    if(rep_unit_string   != NULL){ free(rep_unit_string); }
     if(WrapDP            != NULL){ free(WrapDP); }
+    for(int i=0; i<(MAX_PERIOD + 1); i++){
+        if( consensus[i] != NULL ){ free(consensus[i]); }
+    }
+    if(consensus         != NULL){ free(consensus); }
+    for(int i=0; i<(MAX_PERIOD + 1); i++){
+        if( gaps[i] != NULL ){ free(gaps[i]); }
+    }
+    if( gaps             != NULL ){ free(gaps); }
     fprintf(stderr, "cannot allocate space for one of global variables in the heap.\n");
     exit(EXIT_FAILURE);
 }
 
-int handle_one_file(char *inputFile){
-    //---------------------------------------------------------------------------
-    // Feed a string from a file, convert the string into a series of integers
-    //---------------------------------------------------------------------------
-    
-    FILE *fp = fopen(inputFile, "r");
-    if(fp == NULL){
-        fprintf(stderr, "fatal error: cannot open %s\n", inputFile);
-        exit(EXIT_FAILURE);
-    }
-    
+void malloc_global_variables(){
     int pow4k = 1;
     for(int i=0; i<maxKmer; i++){ pow4k = 4 * pow4k; }  // 4^k
     
@@ -50,20 +55,82 @@ int handle_one_file(char *inputFile){
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( sortedString == NULL ){ free_global_variables_and_exit(); }
     
-    freq_interval_len = (float *)malloc( sizeof(float) * MAX_INPUT_LENGTH);
+    RRs = (repeat_in_read*) malloc(2*sizeof(repeat_in_read));
+    if( RRs == NULL ){ free_global_variables_and_exit(); }
+    
+    directional_index = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    if( directional_index == NULL ){ free_global_variables_and_exit(); }
+    
+    vector0 = (int *)malloc(sizeof(int) * 4 * BLK);
+    if( vector0 == NULL ){ free_global_variables_and_exit(); }
+    
+    vector1 = (int *)malloc(sizeof(int) * 4 * BLK);
+    if( vector1 == NULL ){ free_global_variables_and_exit(); }
+    
+    vector2 = (int *)malloc(sizeof(int) * 4 * BLK);
+    if( vector2 == NULL ){ free_global_variables_and_exit(); }
+    
+    freq_interval_len = (double *)malloc( sizeof(double) * MAX_INPUT_LENGTH);
     if( freq_interval_len == NULL ){ free_global_variables_and_exit(); }
-    
-    Kadane_val        = (float *)malloc( sizeof(int) * MAX_INPUT_LENGTH);
-    if( Kadane_val == NULL ){ free_global_variables_and_exit(); }
-    
-    max_starts      = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
-    if( max_starts == NULL ){ free_global_variables_and_exit(); }
     
     count_period_all= (int *)malloc( sizeof(int) * MAX_PERIOD);
     if( count_period_all == NULL ){ free_global_variables_and_exit(); }
     
-    WrapDP          = (int *)malloc(sizeof(int) * (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1));
+    rep_unit_string = (int *)malloc( sizeof(int) * MAX_PERIOD);
+    if( rep_unit_string == NULL ){ free_global_variables_and_exit(); }
+    
+    WrapDP          = (int *)malloc(sizeof(int) * WrapDPsize);
     if( WrapDP == NULL ){ free_global_variables_and_exit(); }
+    
+    consensus = malloc(sizeof(int *) * (MAX_PERIOD + 1));
+    if( consensus == NULL ){ free_global_variables_and_exit(); }
+    for(int i=0; i<(MAX_PERIOD + 1); i++){
+        consensus[i] = malloc(sizeof(int) * 5);
+        if( consensus[i] == NULL ){ free_global_variables_and_exit(); }
+    }
+    
+    gaps = malloc(sizeof(int *) * (MAX_PERIOD + 1));
+    if( gaps == NULL ){ free_global_variables_and_exit(); }
+    for(int i=0; i<(MAX_PERIOD + 1); i++){
+        gaps[i] = malloc(sizeof(int) * 4);
+        if( gaps[i] == NULL ){ free_global_variables_and_exit(); }
+    }
+}
+
+void free_global_variables(){
+    free(orgInputString);
+    free(inputString);
+    free(count);
+    free(sortedString);
+    free(RRs);
+    free(directional_index);
+    free(vector0);
+    free(vector1);
+    free(vector2);
+    free(freq_interval_len);
+    free(count_period_all);
+    free(rep_unit_string);
+    free(WrapDP);
+    for(int i=0; i<(MAX_PERIOD + 1); i++){ free(consensus[i]); }
+    for(int i=0; i<(MAX_PERIOD + 1); i++){ free(gaps[i]); }
+    free(consensus);
+    free(gaps);
+    
+}
+
+int handle_one_file(char *inputFile, int print_multiple_TR){
+    //---------------------------------------------------------------------------
+    // Feed a string from a file, convert the string into a series of integers
+    //---------------------------------------------------------------------------
+    
+
+    
+    FILE *fp = fopen(inputFile, "r");
+    if(fp == NULL){
+        fprintf(stderr, "fatal error: cannot open %s\n", inputFile);
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+    }
     
     char s[BLK];
     char readID[BLK];
@@ -71,6 +138,8 @@ int handle_one_file(char *inputFile){
     int cnt=0;
     int read_cnt = 0;
     int firstRead = 1;  // 1 means the first read.
+    
+    malloc_global_variables();
     
     while (fgets(s, BLK, fp) != NULL) { // Feed a string of size BLK from fp into string s
         if( MAX_INPUT_LENGTH < cnt){
@@ -82,11 +151,13 @@ int handle_one_file(char *inputFile){
                 firstRead = 0;
             }else{  // Process the previous read if the current read is not the first one.
                 inputLen = cnt;
-                handle_one_read(readID, inputLen, read_cnt);
+                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
                 read_cnt++;
             }
             // Feed the header of the read.
-            for(i=1; s[i]!='\0' && s[i]!='\n' && i<MAX_ID_LENGTH; i++){ readID[i-1] = s[i]; }
+            for(i=1; s[i]!='\0' && s[i]!='\n' && i<BLK; i++){
+                readID[i-1] = s[i];
+            }
             readID[i-1] = '\0';
             cnt = 0;
         }else{
@@ -112,22 +183,14 @@ int handle_one_file(char *inputFile){
             }
         }
     }
-    // Process the last read.
     inputLen = cnt;
-    handle_one_read(readID, inputLen, read_cnt);
+    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
     read_cnt++;
+
     
     fclose(fp);
-    
-    free(orgInputString);
-    free(inputString);
-    free(count);
-    free(sortedString);
-    free(freq_interval_len);
-    free(Kadane_val);
-    free(max_starts);
-    free(count_period_all);
-    free(WrapDP);
+
+    free_global_variables();
     
     return(read_cnt);
 }
