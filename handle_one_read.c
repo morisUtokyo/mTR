@@ -120,7 +120,7 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         freq_interval_len[i] = (double)(local_end - local_start);
         
         for(int j = local_start; j < (local_end - 1); j++){
-            int aPeriod = sortedString[j+1] - sortedString[j];
+            int aPeriod = abs(sortedString[j+1] - sortedString[j]);
             if(aPeriod < MAX_PERIOD){
                 count_period_all[ aPeriod ]++;
             }
@@ -303,25 +303,6 @@ double DI_index(int *v0, int *v1, int *v2, int k){
     return(DI);
 }
 
-int local_minimum(double* val, int pos, int left, int right, int window){
-    int answer = 1;
-    int left_i = left;
-    if(left_i < pos - window){
-        left_i = pos - window;
-    }
-    int right_i = right;
-    if(pos + window < right_i){
-        right_i = pos + window;
-    }
-    for(int i=left_i; i < right_i; i++){
-        if(val[i] < val[pos]){
-            answer = 0;
-            break;
-        }
-    }
-    return(answer);
-}
-
 void fill_directional_index(int inputLen, int w, int k){
     // initialized inputString with a given value for k
     init_inputString(k, inputLen);
@@ -354,6 +335,25 @@ void fill_directional_index(int inputLen, int w, int k){
         directional_index[i] = (double)DI_index(vector0, vector1, vector2, k);
         //printf("%c\t%0.2f ", dec2char(orgInputString[i]), directional_index[i]);
     }
+}
+
+int local_minimum(double* val, int pos, int left, int right, int window){
+    int answer = 1;
+    int left_i = left;
+    if(left_i < pos - window){
+        left_i = pos - window;
+    }
+    int right_i = right;
+    if(pos + window < right_i){
+        right_i = pos + window;
+    }
+    for(int i=left_i; i < right_i; i++){
+        if(val[i] < val[pos]){
+            answer = 0;
+            break;
+        }
+    }
+    return(answer);
 }
 
 int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR){
