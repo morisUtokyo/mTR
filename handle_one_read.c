@@ -337,25 +337,6 @@ void fill_directional_index(int inputLen, int w, int k){
     }
 }
 
-int local_minimum(double* val, int pos, int left, int right, int window){
-    int answer = 1;
-    int left_i = left;
-    if(left_i < pos - window){
-        left_i = pos - window;
-    }
-    int right_i = right;
-    if(pos + window < right_i){
-        right_i = pos + window;
-    }
-    for(int i=left_i; i < right_i; i++){
-        if(val[i] < val[pos]){
-            answer = 0;
-            break;
-        }
-    }
-    return(answer);
-}
-
 int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR){
     
     int found = 0;
@@ -372,25 +353,23 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *
             min_pos = i;
             min_DI  = directional_index[min_pos];
         }
-        // Fix the range [max_pos, min_pos+w] if min_DI is a local minimum with the window of length w
-        // The repeat length must be greater than w
-        int window;
-        if(print_multiple_TR == 1){
-            window = w;
-        }else{
-            window = inputLen;  // Need to accelate local mimumum search
-        }
-        
-        if( max_pos + w <= min_pos &&
-           local_minimum(directional_index, i, 0, inputLen, window) == 1)
-        {
-            //printf("w = %i\tk = %i\trange = [%i,%i]\t%0.2f\t%0.2f\n", w, k, max_pos, min_pos+w, max_DI, min_DI);
-            *max_start = max_pos;
-            *max_end   = min_pos + w;
-            *max_DI_answer = max_DI;
+        if( print_multiple_TR == 1 &&
+            max_pos + w < i &&
+            max_pos + w <= min_pos &&
+            min_pos + w < i )
+        {   // max_pos and min_pos are locally maximum and minimum, respectively and are distant apart >= w bases.
             found = 1;
-            break;  // report the first range found
+            break;
         }
+    }
+    if(print_multiple_TR == 0 && max_pos + w <= min_pos){
+        // For the mode of finding one tandem repeat print_multiple_TR == 0)
+        found = 1;
+    }
+    if(found == 1){
+        *max_start = max_pos;
+        *max_end   = min_pos + w;
+        *max_DI_answer = max_DI;
     }
     return(found);
 }

@@ -32,6 +32,7 @@ int *inputString;       // 4 decimal encoding of the input read string of length
 int *count;             // A table of size 4^k for counting sort.
 int *sortedString;      // Positions of 4-mers sorted wrt both 4-mers and their positions.
 double *directional_index;  // For detecting boundaries of tandem repeats
+
 int *vector0, *vector1, *vector2;
 double *freq_interval_len;       // For computing frequency distribution of interval lengths
                        // The length is MAX_INPUT_LENGTH
