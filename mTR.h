@@ -13,7 +13,7 @@
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
-#define maxKmer 10              // Increase this when no qualified repeats are found.
+#define maxKmer 11              // Increase this when no qualified repeats are found.
 #define BLK 1024                // Block size of input buffer.
 #define MAX_PERIOD 500          // Maximum period length
 #define MIN_NUM_FREQ_UNIT 7     // The minimum threshold of number of units
@@ -85,15 +85,12 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
 
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
-//int feed_rr_into_repeats_in_all_reads(char *inputFile);
-
-//void k_means_clustering(int read_cnt, int pretty_print);
-//void print_one_TR_with_read(TR aTR, int pretty_print);
 
 // For debugging with #ifdef
 
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
-//#define DEBUG_segmentation_hault
+
 //#define DEBUG_window_kmer
+

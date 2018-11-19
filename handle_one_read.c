@@ -231,30 +231,21 @@ void init_inputString(int k, int inputLen){
 
 void find_tandem_repeat(int max_start, int max_end, char *readID, int inputLen,  repeat_in_read *rr, repeat_in_read *tmp_rr ){
     
-    // Policy of minimum description length
-    // A shorter unit is better than a longer one.
-    float max_match_ratio = -1;
-    int min_period = MAX_PERIOD;
-    
+    int max_matches = -1;
     clear_rr(tmp_rr);  // clear the space for the result
     
     for(int k = minKmer; k <= maxKmer; k++){
         clear_rr(rr);
         init_inputString(k, inputLen);
         find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
-        float tmp_match_ratio =  (float)rr->Num_matches/rr->actual_repeat_len;
-        if(
-           // Allow a longer period that doubles the minimum period found
-           rr->actual_rep_period < min_period * 2 &&
-           max_match_ratio < tmp_match_ratio &&
-           MIN_MATCH_RATIO < tmp_match_ratio &&
-           MIN_NUM_FREQ_UNIT < rr->Num_freq_unit)
+        
+        if( max_matches < rr->Num_matches &&
+            MIN_MATCH_RATIO < (float)rr->Num_matches/rr->actual_repeat_len &&
+            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit )
         {
-            max_match_ratio = tmp_match_ratio;
-            min_period = rr->actual_rep_period;
-            *tmp_rr = *rr;   // RRs[1] contains the temporally maximum value.
+            max_matches = rr->Num_matches;
+            *tmp_rr = *rr;
         }
-
     }
     *rr = *tmp_rr;
 }
@@ -355,14 +346,14 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *
         }
         if( print_multiple_TR == 1 &&
             max_pos + w < i &&
-            max_pos + w <= min_pos &&
+            max_pos + w < min_pos &&
             min_pos + w < i )
         {   // max_pos and min_pos are locally maximum and minimum, respectively and are distant apart >= w bases.
             found = 1;
             break;
         }
     }
-    if(print_multiple_TR == 0 && max_pos + w <= min_pos){
+    if(print_multiple_TR == 0 && max_pos < min_pos){
         // For the mode of finding one tandem repeat print_multiple_TR == 0)
         found = 1;
     }
@@ -385,13 +376,25 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         double max_DI = 0;
         
         int w0=64;
-        for(int k=3; k<=5; k++){  // w0 = 4^k
-            int w = w0/2;
-            for(int i=0; i<3; i++){ // 3 windows
+        for(int k=3; k<=5; k++){ // w0 = 4^k
+            int w, iter;
+            if(k == 3){         //  w = 32, 64 or 128.  w/4^k = 1/2, 1 or 2
+                w = w0/2;   iter = 3;
+            }else if(k ==4){    //  w = 256, 512.  w/4^k = 1 or 2
+                w = w0;     iter = 2;
+            }else{              // w = 1024, 2048, w/4^k = 1 or 2
+                w = w0;     iter = 2;
+            }
+            for(int i=0; i<iter; i++){
                 fill_directional_index(inputLen, w, k);
                 int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
-                if(found_one == 1 && max_measure < tmp_DI) {
-                    max_measure = tmp_DI;
+                
+                double tmp_measure;
+                tmp_measure = tmp_DI * (1 + 0.2 * (k-3));
+                //tmp_measure = log(max_end - max_start + 1);
+                
+                if(found_one == 1 && max_measure < tmp_measure) {
+                    max_measure = tmp_measure;
                     max_w = w;
                     max_k = k;
                     max_start = tmp_start;
@@ -405,16 +408,13 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         }
 
         if(found){
-#ifdef DEBUG_segmentation_hault
-            fprintf(stderr, "w=%i\tk=%i\tmax_start=%i\tmax_end=%i\tsearch_pos=%i\n", max_w, max_k, max_start, max_end, search_pos);
+#ifdef DEBUG_window_kmer
+            printf("w=%i\tk=%i\t[%i, %i]\n", max_w, max_k, max_start, max_end);
 #endif
             fill_directional_index(inputLen, max_w, max_k);
             find_tandem_repeat(max_start, max_end, readID, inputLen, &RRs[0], &RRs[1]);
             
             if(RRs[0].actual_repeat_len > 0){
-#ifdef DEBUG_window_kmer
-                printf("w=%i\tk=%i\t", max_w, max_k);
-#endif
                 print_one_repeat_in_read(RRs[0]);
             }
             if(print_multiple_TR == 1){
