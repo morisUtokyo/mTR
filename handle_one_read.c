@@ -375,36 +375,27 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         double tmp_DI = 0;
         double max_DI = 0;
         
-        int w0=64;
-        for(int k=3; k<=5; k++){ // w0 = 4^k
-            int w, iter;
-            if(k == 3){         //  w = 32, 64 or 128.  w/4^k = 1/2, 1 or 2
-                w = w0/2;   iter = 3;
-            }else if(k ==4){    //  w = 256, 512.  w/4^k = 1 or 2
-                w = w0;     iter = 2;
-            }else{              // w = 1024, 2048, w/4^k = 1 or 2
-                w = w0;     iter = 2;
+        // A new strategy with a mathematical grounding
+        int k = 4;
+        for(int w = 20; w < 5000; ){
+            fill_directional_index(inputLen, w, k);
+            int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
+            double tmp_measure = tmp_DI;
+            if(found_one == 1 && max_measure < tmp_measure) {
+                max_measure = tmp_measure;
+                max_w = w;
+                max_k = k;
+                max_start = tmp_start;
+                max_end   = tmp_end;
+                max_DI    = tmp_DI;
+                found = 1;
             }
-            for(int i=0; i<iter; i++){
-                fill_directional_index(inputLen, w, k);
-                int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
-                
-                double tmp_measure;
-                tmp_measure = tmp_DI * (1 + 0.2 * (k-3));
-                //tmp_measure = log(max_end - max_start + 1);
-                
-                if(found_one == 1 && max_measure < tmp_measure) {
-                    max_measure = tmp_measure;
-                    max_w = w;
-                    max_k = k;
-                    max_start = tmp_start;
-                    max_end   = tmp_end;
-                    max_DI    = tmp_DI;
-                    found = 1;
-                }
-                w = w * 2;
+            // Sizes of windows
+            if(w < 100){           w += 20;
+            //}else if(w < 500){    w += 50;
+            }else if(w < 1000){     w += 100;
+            }else{                 w += 1000;
             }
-            w0 = w0 * 4;
         }
 
         if(found){
