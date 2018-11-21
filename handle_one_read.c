@@ -250,7 +250,6 @@ void find_tandem_repeat(int max_start, int max_end, char *readID, int inputLen, 
     *rr = *tmp_rr;
 }
 
-
 double DI_index(int *v0, int *v1, int *v2, int k){
     int pow4k = 1;
     for(int i=0; i<k; i++){
@@ -376,7 +375,7 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         double max_DI = 0;
         
         // A new strategy with a mathematical grounding
-        int k = 4;
+        int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
         for(int w = 20; w < 5000; ){
             fill_directional_index(inputLen, w, k);
             int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
@@ -391,16 +390,16 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
                 found = 1;
             }
             // Sizes of windows
-            if(w < 100){           w += 20;
-            //}else if(w < 500){    w += 50;
-            }else if(w < 1000){     w += 100;
-            }else{                 w += 1000;
+            if(w <= 50){        w += 10;
+            }else if(w < 100){   w += 20;
+            }else if(w < 1000){  w += 100;
+            }else{              w += 1000;
             }
         }
 
         if(found){
 #ifdef DEBUG_window_kmer
-            printf("w=%i\tk=%i\t[%i, %i]\n", max_w, max_k, max_start, max_end);
+            printf("w=%i\tk=%i\t[%i, %i, %i]\n", max_w, max_k, max_start, max_end, (max_end - max_start + 1));
 #endif
             fill_directional_index(inputLen, max_w, max_k);
             find_tandem_repeat(max_start, max_end, readID, inputLen, &RRs[0], &RRs[1]);
