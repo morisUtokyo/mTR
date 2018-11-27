@@ -16,6 +16,7 @@
 #define maxKmer 11              // Increase this when no qualified repeats are found.
 #define BLK 1024                // Block size of input buffer.
 #define MAX_PERIOD 500          // Maximum period length
+#define MIN_PERIOD 2            // Minimum period length
 #define MIN_NUM_FREQ_UNIT 7     // The minimum threshold of number of units
 #define WrapDPsize  10000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
 // Parameters for global and wrap around alignment
@@ -47,11 +48,10 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     ID;  // 0,1,2,...
     char    readID[BLK];
     int     inputLen;
-    int     max_start;
-    int     max_end;
-    int     actual_repeat_len;
+    int     rep_start;
+    int     rep_end;
+    int     repeat_len;
     int     rep_period;
-    int     actual_rep_period;
     int     Num_freq_unit;
     int     Num_matches;
     int     Num_mismatches;
@@ -60,6 +60,7 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     Kmer;
     int     ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
     char    string[MAX_PERIOD];
+    int     predicted_rep_period;
     int     freq_2mer[16];
 } repeat_in_read;
 
@@ -77,8 +78,10 @@ int progressive_multiple_alignment(
    int max_start, int max_end, int max_pos,
    int rep_period, int Kmer, int inputLen, int pow4k);
 int search_De_Bruijn_graph(int max_start, int max_end, int max_pos,
-   int rep_period, int inputLen, int pow4k_1);
-void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
+   int inputLen, int pow4k_1);
+void wrap_around_DP(
+   int *rep_unit, int unit_len, int *rep, int rep_len,
+   int *actual_start,   int *actual_end,
    int *return_rep_len, int *return_freq_unit,
    int *return_matches, int *return_mismatches,
    int *return_insertions, int *return_deletions);

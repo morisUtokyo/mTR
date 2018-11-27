@@ -66,11 +66,10 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->ID                = -1;
     strcpy( rr_a->readID, "");
     rr_a->inputLen          = -1;
-    rr_a->max_start         = -1;
-    rr_a->max_end           = -1;
-    rr_a->actual_repeat_len = -1;
+    rr_a->rep_start         = -1;
+    rr_a->rep_end           = -1;
+    rr_a->repeat_len        = -1;
     rr_a->rep_period        = -1;
-    rr_a->actual_rep_period = -1;
     strcpy( rr_a->string, "");
     for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = -1; }
     rr_a->Num_freq_unit     = -1;
@@ -82,18 +81,13 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->ConsensusMethod     = -1;
 }
 
-void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputLen, int Kmer, repeat_in_read *rr ){
-    
-    //---------------------------------------------------------------------------
-    // In the range [max_start, max_end],
-    // compute the representative unit string by using a progressive multiple alignment or
-    // by traversing the De Bruijn graph of all k-mers in a greedy manner
-    //---------------------------------------------------------------------------
-    
+void predicted_rep_period_and_max_position(int max_start, int max_end, int inputLen,
+        int *predicted_rep_period, int *max_pos, int Kmer)
+{
     // Sort k-mers using counting sort and store the positions of k-mers in sortedString
     int pow4k = 1;    // 4^{k}  e.g., 4^(4) = 256
     for(int i=0; i<Kmer; i++){ pow4k = 4 * pow4k;}
-    int pow4k_1 = pow4k/4;
+    
     for(int i = 0; i < pow4k; i++){ count[i] = 0;}  // Initialization
     for(int i = max_start; i <= max_end; i++){ count[ inputString[i] ]++; }    // Perform counting
     for(int i = 1; i < pow4k; i++){ count[i] = count[i-1] + count[i]; }
@@ -127,32 +121,44 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         }
     }
     //　Locate the initial position (k-mer) with the maximum frequency
-    int max_pos = max_start;
-    int max_freq   = (int)freq_interval_len[max_pos];
+    *max_pos = max_start;
+    int max_freq   = (int)freq_interval_len[*max_pos];
     for(int j=max_start; j <= max_end; j++){
         if(max_freq < freq_interval_len[j]){
-            max_pos  = j;
-            max_freq = (int)freq_interval_len[max_pos];
+            *max_pos  = j;
+            max_freq = (int)freq_interval_len[*max_pos];
         }
     }
     // Compute repeat period with the maximum frequency
-    int rep_period = 2;
+    *predicted_rep_period = 2;
     max_freq = 0;
     for(int p = 2; p < MAX_PERIOD; p++){
         if(max_freq < count_period_all[p]){
-            rep_period = p;
+            *predicted_rep_period = p;
             max_freq = count_period_all[p];
         }
     }
-    // Initialization
-    int actual_rep_period;
-    for(int i = 0; i < MAX_PERIOD; i++){
-        rep_unit_string[i] = 0;
-    }
+}
+
+void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputLen, int Kmer, repeat_in_read *rr ){
     
+    //---------------------------------------------------------------------------
+    // In the range [max_start, max_end],
+    // compute the representative unit string by using a progressive multiple alignment or
+    // by traversing the De Bruijn graph of all k-mers in a greedy manner
+    //---------------------------------------------------------------------------
+
+    int predicted_rep_period, max_pos;
+    predicted_rep_period_and_max_position(
+        max_start, max_end, inputLen, &predicted_rep_period, &max_pos, Kmer);
+    
+    int pow4k = 1;    // 4^{k}  e.g., 4^(4) = 256
+    for(int i=0; i<Kmer; i++){ pow4k = 4 * pow4k;}
+    int pow4k_1 = pow4k/4;
+
     // Traverse the De Bruijn graph of all k-mers in a greedy manner
-    actual_rep_period =
-    search_De_Bruijn_graph(max_start, max_end, max_pos, rep_period, inputLen, pow4k_1);
+    int actual_rep_period =
+    search_De_Bruijn_graph(max_start, max_end, max_pos, inputLen, pow4k_1);
     
     int ConsensusMethod;
     //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
@@ -162,7 +168,7 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
     }else{
         // If the De Bruijn graph search fails, try a progressive  multiple alignment.
         ConsensusMethod = ProgressiveMultipleAlignment;
-        actual_rep_period = progressive_multiple_alignment( max_start, max_end, max_pos, rep_period, Kmer, inputLen, pow4k);
+        actual_rep_period = progressive_multiple_alignment( max_start, max_end, max_pos, predicted_rep_period, Kmer, inputLen, pow4k);
     }
     
     //---------------------------------------------------------------------------
@@ -173,22 +179,24 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
         clear_rr(rr);
     }else if(actual_rep_period > 0){
-        int actual_repeat_len, Num_freq_unit, Num_matches, Num_mismatches, Num_insertions, Num_deletions;
+        int actual_start, actual_end, actual_repeat_len, Num_freq_unit, Num_matches, Num_mismatches, Num_insertions, Num_deletions;
         
         wrap_around_DP(rep_unit_string,
                        actual_rep_period,
                        &orgInputString[max_start],
                        (max_end - max_start + 1),
+                       &actual_start,       &actual_end,
                        &actual_repeat_len,  &Num_freq_unit,
                        &Num_matches,        &Num_mismatches,
                        &Num_insertions,     &Num_deletions);
         
         strcpy( rr->readID, readID);
         rr->inputLen           = inputLen;
-        rr->max_start          = max_start;
-        rr->max_end            = max_end;
-        rr->rep_period         = rep_period;
-        rr->actual_rep_period  = actual_rep_period;
+        rr->rep_start          = max_start + actual_start;
+        rr->rep_end            = max_start + actual_end;
+        rr->repeat_len         = actual_repeat_len;
+        rr->predicted_rep_period = predicted_rep_period;
+        rr->rep_period         = actual_rep_period;
         rr->Kmer      = Kmer;
         rr->Num_freq_unit      = 0;
         rr->ConsensusMethod    = ConsensusMethod;
@@ -197,8 +205,7 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         rr->Num_mismatches     = Num_mismatches;
         rr->Num_insertions     = Num_insertions;
         rr->Num_deletions      = Num_deletions;
-        
-        rr->actual_repeat_len = actual_repeat_len;
+    
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
     }
@@ -229,19 +236,23 @@ void init_inputString(int k, int inputLen){
 }
 
 
-void find_tandem_repeat(int max_start, int max_end, char *readID, int inputLen,  repeat_in_read *rr, repeat_in_read *tmp_rr ){
+void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, char *readID, int inputLen,  repeat_in_read *rr, repeat_in_read *tmp_rr ){
     
     int max_matches = -1;
     clear_rr(tmp_rr);  // clear the space for the result
+
     
+    //for(int k = MIN(minKmer, predicted_rep_period); k <= maxKmer; k++){
     for(int k = minKmer; k <= maxKmer; k++){
         clear_rr(rr);
         init_inputString(k, inputLen);
         find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
         
         if( max_matches < rr->Num_matches &&
-            MIN_MATCH_RATIO < (float)rr->Num_matches/rr->actual_repeat_len &&
-            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit )
+            MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
+            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
+            rr->rep_period < predicted_rep_period * 2 && // An ad hoc rule
+            MIN_PERIOD <= rr->rep_period )
         {
             max_matches = rr->Num_matches;
             *tmp_rr = *rr;
@@ -379,6 +390,7 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         for(int w = 20; w < 5000; ){
             fill_directional_index(inputLen, w, k);
             int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
+            
             double tmp_measure = tmp_DI;
             if(found_one == 1 && max_measure < tmp_measure) {
                 max_measure = tmp_measure;
@@ -398,13 +410,15 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         }
 
         if(found){
+            int predicted_rep_period, max_pos;
+            predicted_rep_period_and_max_position(max_start, max_end, inputLen, &predicted_rep_period, &max_pos, 4);
 #ifdef DEBUG_window_kmer
-            printf("w=%i\tk=%i\t[%i, %i, %i]\n", max_w, max_k, max_start, max_end, (max_end - max_start + 1));
+            printf("w=%i\tk=%i\t[%i, %i, %i]\t%i\n", max_w, max_k, max_start, max_end, (max_end - max_start + 1), predicted_rep_period);
 #endif
-            fill_directional_index(inputLen, max_w, max_k);
-            find_tandem_repeat(max_start, max_end, readID, inputLen, &RRs[0], &RRs[1]);
+            //fill_directional_index(inputLen, max_w, max_k);
+            find_tandem_repeat(max_start, max_end, predicted_rep_period, readID, inputLen, &RRs[0], &RRs[1]);
             
-            if(RRs[0].actual_repeat_len > 0){
+            if(RRs[0].repeat_len > 0){
                 print_one_repeat_in_read(RRs[0]);
             }
             if(print_multiple_TR == 1){

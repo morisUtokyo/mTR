@@ -14,8 +14,9 @@
 
 // We used a global alignment algorithm in place of a local alignment that outpurs shorter alignments.
 void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
-                    int *return_rep_len, int *return_freq_unit,
-                    int *return_matches, int *return_mismatches,
+                    int *actual_start,      int *actual_end,
+                    int *return_rep_len,    int *return_freq_unit,
+                    int *return_matches,    int *return_mismatches,
                     int *return_insertions, int *return_deletions){
     
     int i, j;
@@ -88,7 +89,7 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
     }
     
     
-    while(i > 0){                 // global alignment
+    while(i > 0 && WrapDP[next*i + j] > 0){                 // global alignment
         if( i > 0 && j > 0 && max_wrd == WrapDP[next*(i-1) + j-1]+ MATCH_GAIN){
             max_wrd -= MATCH_GAIN;
             i--; j--;
@@ -116,8 +117,10 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
             j = unit_len;
         }
     }
-    int actual_repeat_len = max_i - i;
+    *actual_start       = i;
+    *actual_end         = max_i;
     
+    int actual_repeat_len = max_i - i + 1;
     *return_rep_len     = actual_repeat_len;
     *return_freq_unit   = (int)Num_scanned_unit/unit_len;
     *return_matches     = Num_matches;

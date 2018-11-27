@@ -10,10 +10,15 @@
 
 
 int search_De_Bruijn_graph(
-            int max_start, int max_end, int max_pos,
-            int rep_period, int inputLen, int pow4k_1){
-    
+    int max_start, int max_end, int max_pos, int inputLen, int pow4k_1){
+
+    // Initialization
+    for(int i = 0; i < MAX_PERIOD; i++){
+        rep_unit_string[i] = 0;
+    }
     int actual_rep_period = 0;
+    
+    
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     
     int start, end, tmp_count;
@@ -74,6 +79,10 @@ int progressive_multiple_alignment(
     printf("max_start = %i\tmax_end = %i\tmax_pos = %i\trep_period =%i\tstart=%i\tend=%i\tKmer = %i\n", max_start, max_end, max_pos, rep_period, start, end, Kmer);
 #endif
     
+    // Initialization
+    for(int i = 0; i < MAX_PERIOD; i++){
+        rep_unit_string[i] = 0;
+    }
     
     int *matDP = WrapDP;  // Reuse WrapDP by renaming WrapDP by oneDP
     for(int i=0; i<(rep_period + 1)*(rep_period + 1); i++){
