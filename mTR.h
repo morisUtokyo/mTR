@@ -17,7 +17,7 @@
 #define BLK 1024                // Block size of input buffer.
 #define MAX_PERIOD 500          // Maximum period length
 #define MIN_PERIOD 2            // Minimum period length
-#define MIN_NUM_FREQ_UNIT 7     // The minimum threshold of number of units
+#define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  10000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1

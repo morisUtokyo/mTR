@@ -241,9 +241,9 @@ void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, ch
     int max_matches = -1;
     clear_rr(tmp_rr);  // clear the space for the result
 
-    
-    //for(int k = MIN(minKmer, predicted_rep_period); k <= maxKmer; k++){
-    for(int k = minKmer; k <= maxKmer; k++){
+    // When (predicted_rep_period, minKmer) = (3, 5), (5, 5), and (10, 5),  MIN = 3, 5, and 10.
+    for(int k = MIN(predicted_rep_period, minKmer); k <= maxKmer; k++){
+    //for(int k = minKmer; k <= maxKmer; k++){
         clear_rr(rr);
         init_inputString(k, inputLen);
         find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
@@ -413,7 +413,7 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
             int predicted_rep_period, max_pos;
             predicted_rep_period_and_max_position(max_start, max_end, inputLen, &predicted_rep_period, &max_pos, 4);
 #ifdef DEBUG_window_kmer
-            printf("w=%i\tk=%i\t[%i, %i, %i]\t%i\n", max_w, max_k, max_start, max_end, (max_end - max_start + 1), predicted_rep_period);
+            printf("w=%i\tk=%i\t[%i, %i, \t%i]\t%i\n", max_w, max_k, max_start, max_end, (max_end - max_start + 1), predicted_rep_period);
 #endif
             //fill_directional_index(inputLen, max_w, max_k);
             find_tandem_repeat(max_start, max_end, predicted_rep_period, readID, inputLen, &RRs[0], &RRs[1]);
