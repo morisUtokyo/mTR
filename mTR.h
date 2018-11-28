@@ -8,7 +8,7 @@
 
 // Key parameters
 
-#define MAX_INPUT_LENGTH 500000  // The maximum length of each read
+#define MAX_INPUT_LENGTH 200000  // The maximum length of each read
 #define MIN_MATCH_RATIO 0.7      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
 
 // The following values are optimzed for a benchmark dataset.
@@ -28,6 +28,7 @@
 #define DeBruijnGraphSearch 1
 
 //  Global variables in the heap
+int *pow4;              // A table of pow(4, k)
 int *orgInputString;    // An input read string of length MAX_INPUT_LENGTH.
 int *inputString;       // 4 decimal encoding of the input read string of length MAX_INPUT_LENGTH.
 int *count;             // A table of size 4^k for counting sort.
@@ -96,4 +97,6 @@ void print_one_repeat_in_read(repeat_in_read rr);
 //#define DEBUG_progressive_multiple_alignment
 
 //#define DEBUG_window_kmer
+
+//#define DEBUG_incremental
 

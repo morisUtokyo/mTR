@@ -13,6 +13,7 @@
 
 void free_global_variables_and_exit(){
     // If any of the above global variables failed to be allocated in the heap, free other variables and exit.
+    if(pow4              != NULL){ free(pow4); }
     if(orgInputString    != NULL){ free(orgInputString); }
     if(inputString       != NULL){ free(inputString); }
     if(count             != NULL){ free(count); }
@@ -39,17 +40,22 @@ void free_global_variables_and_exit(){
 }
 
 void malloc_global_variables(){
-    int pow4k = 1;
-    for(int i=0; i<maxKmer; i++){ pow4k = 4 * pow4k; }  // 4^k
     
     // Allocate the main memory for global variables in the heap
+    pow4  = (int *)malloc(sizeof(int) * (maxKmer+1));
+    if( pow4 == NULL ){ free_global_variables_and_exit(); }
+    pow4[0] = 1;
+    for(int i=1; i<= maxKmer; i++){
+        pow4[i] = pow4[i-1] * 4;
+    }
+    
     orgInputString  = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( orgInputString == NULL ){ free_global_variables_and_exit(); }
     
     inputString     = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( inputString == NULL ){ free_global_variables_and_exit(); }
     
-    count           = (int *)malloc( sizeof(int) * pow4k);
+    count           = (int *)malloc( sizeof(int) * pow4[maxKmer]);
     if( count == NULL ){ free_global_variables_and_exit(); }
     
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
@@ -98,6 +104,7 @@ void malloc_global_variables(){
 }
 
 void free_global_variables(){
+    free(pow4);
     free(orgInputString);
     free(inputString);
     free(count);
