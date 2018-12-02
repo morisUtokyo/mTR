@@ -5,6 +5,7 @@
 //  Created by Shinichi Morishita
 //
 
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -42,10 +43,10 @@ void free_global_variables_and_exit(){
 void malloc_global_variables(){
     
     // Allocate the main memory for global variables in the heap
-    pow4  = (int *)malloc(sizeof(int) * (maxKmer+1));
+    pow4  = (int *)malloc(sizeof(int) * (maxKmer2+1));
     if( pow4 == NULL ){ free_global_variables_and_exit(); }
     pow4[0] = 1;
-    for(int i=1; i<= maxKmer; i++){
+    for(int i=1; i<= maxKmer2; i++){
         pow4[i] = pow4[i-1] * 4;
     }
     
@@ -55,7 +56,7 @@ void malloc_global_variables(){
     inputString     = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( inputString == NULL ){ free_global_variables_and_exit(); }
     
-    count           = (int *)malloc( sizeof(int) * pow4[maxKmer]);
+    count           = (int *)malloc( sizeof(int) * pow4[maxKmer2]);
     if( count == NULL ){ free_global_variables_and_exit(); }
     
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
@@ -130,8 +131,6 @@ int handle_one_file(char *inputFile, int print_multiple_TR){
     // Feed a string from a file, convert the string into a series of integers
     //---------------------------------------------------------------------------
     
-
-    
     FILE *fp = fopen(inputFile, "r");
     if(fp == NULL){
         fprintf(stderr, "fatal error: cannot open %s\n", inputFile);
@@ -146,7 +145,12 @@ int handle_one_file(char *inputFile, int print_multiple_TR){
     int read_cnt = 0;
     int firstRead = 1;  // 1 means the first read.
     
+    struct timeval s_time, e_time;
+    gettimeofday(&s_time, NULL);
     malloc_global_variables();
+    gettimeofday(&e_time, NULL);
+    time_memory += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
+
     
     while (fgets(s, BLK, fp) != NULL) { // Feed a string of size BLK from fp into string s
         if( MAX_INPUT_LENGTH < cnt){

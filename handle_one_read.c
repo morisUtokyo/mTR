@@ -5,6 +5,7 @@
 //  Created by Shinichi Morishita
 //
 
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -84,13 +85,23 @@ void clear_rr(repeat_in_read *rr_a){
 void predicted_rep_period_and_max_position(int max_start, int max_end, int inputLen,
         int *predicted_rep_period, int *max_pos, int k)
 {
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
     for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}  // Initialization
     for(int i = max_start; i <= max_end; i++){ count[ inputString[i] ]++; }    // Perform counting
     for(int i = 1; i < pow4[k]; i++){ count[i] = count[i-1] + count[i]; }
+    
+    
+    gettimeofday(&e, NULL);
+    time_count_table
+    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
     for(int i=0; i<MAX_INPUT_LENGTH; i++){ sortedString[i] = 0; } // Initialization
     for(int i=max_end; max_start <= i; i--){
         sortedString[ --count[inputString[i]] ] = i;
     }
+
     
     // Initialization
     for(int i = 0; i < MAX_PERIOD; i++){
@@ -144,13 +155,24 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
     //---------------------------------------------------------------------------
 
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
     int predicted_rep_period, max_pos;
     predicted_rep_period_and_max_position(
         max_start, max_end, inputLen, &predicted_rep_period, &max_pos, k);
+    
+    gettimeofday(&e, NULL);
+    time_predicted_rep_period_and_max_position
+    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
 
     // Traverse the De Bruijn graph of all k-mers in a greedy manner
+    gettimeofday(&s, NULL);
     int actual_rep_period =
     search_De_Bruijn_graph(max_start, max_end, max_pos, inputLen, pow4[k-1] );
+    gettimeofday(&e, NULL);
+    time_search_De_Bruijn_graph
+    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
     int ConsensusMethod;
     //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
@@ -160,7 +182,13 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
     }else{
         // If the De Bruijn graph search fails, try a progressive  multiple alignment.
         ConsensusMethod = ProgressiveMultipleAlignment;
+        
+        gettimeofday(&s, NULL);
         actual_rep_period = progressive_multiple_alignment( max_start, max_end, max_pos, predicted_rep_period, k, inputLen, pow4[k] );
+        gettimeofday(&e, NULL);
+        time_progressive_multiple_alignment
+        += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+        
     }
     
     //---------------------------------------------------------------------------
@@ -173,6 +201,8 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
     }else if(actual_rep_period > 0){
         int actual_start, actual_end, actual_repeat_len, Num_freq_unit, Num_matches, Num_mismatches, Num_insertions, Num_deletions;
         
+        
+        gettimeofday(&s, NULL);
         wrap_around_DP(rep_unit_string,
                        actual_rep_period,
                        &orgInputString[max_start],
@@ -181,6 +211,8 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
                        &actual_repeat_len,  &Num_freq_unit,
                        &Num_matches,        &Num_mismatches,
                        &Num_insertions,     &Num_deletions);
+        gettimeofday(&e, NULL);
+        time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
         
         strcpy( rr->readID, readID);
         rr->inputLen           = inputLen;
@@ -228,8 +260,15 @@ void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, ch
     int max_matches = -1;
     clear_rr(tmp_rr);  // clear the space for the result
 
-    // When (predicted_rep_period, minKmer) = (3, 5), (5, 5), and (10, 5),  MIN = 3, 5, and 10.
-    for(int k = MIN(predicted_rep_period, minKmer); k <= maxKmer; k++){
+    int k_min, k_max;
+    k_min = MIN(predicted_rep_period, minKmer);
+    int freq_periods = (max_end - max_start)/predicted_rep_period;
+    k_max = maxKmer2;
+    if(predicted_rep_period <= 10 & freq_periods < 150){
+        k_max = maxKmer1;
+    }
+    
+    for(int k = k_min; k <= k_max; k++){
         clear_rr(rr);
         init_inputString(k, inputLen);
         find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
@@ -237,7 +276,7 @@ void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, ch
         if( max_matches < rr->Num_matches &&
             MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
             MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
-            rr->rep_period < predicted_rep_period * 2 && // An ad hoc rule
+            //rr->rep_period < predicted_rep_period * 2 && // This ad hoc rule is removed.
             MIN_PERIOD <= rr->rep_period )
         {
             max_matches = rr->Num_matches;
@@ -364,7 +403,7 @@ void fill_directional_index(int inputLen, int w, int k){
         dec_i_v1 = inputString[i];
         inc_i_v1 = inputString[i + w];
         dec_i_v2 = inputString[i + w];
-        if(w*2 < inputLen - k + 1){
+        if(i + w*2 < inputLen - k + 1){
             inc_i_v2 = inputString[i + w*2];
         }else{
             inc_i_v2 = -1;  // increment no element
@@ -535,6 +574,8 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *
 
 void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR){
     
+    struct timeval s_time, e_time;
+    
     int search_pos = 0;
     while(search_pos < inputLen){
         double max_measure = 0;
@@ -543,7 +584,8 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         double tmp_DI = 0;
         double max_DI = 0;
         
-        // A new strategy with a mathematical grounding
+        // A new strategy
+        gettimeofday(&s_time, NULL);
         int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
         for(int w = 20; w < 5000; ){
             fill_directional_index(inputLen, w, k);
@@ -560,14 +602,20 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
                 found = 1;
             }
             // Sizes of windows
-            if(w <= 50){        w += 10;
-            }else if(w < 100){   w += 20;
-            }else if(w < 1000){  w += 100;
-            }else{              w += 1000;
+            if(w <= 50){       w += 10;
+            }else if(w < 100){  w += 20;
+            //}else if(w < 500){  w += 50;
+            }else if(w < 1000){  w += 100;   // 100
+            }else{              w += 2000;  // 1000
             }
         }
+        gettimeofday(&e_time, NULL);
+        time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
 
+        
         if(found){
+            gettimeofday(&s_time, NULL);
+            
             int predicted_rep_period, max_pos;
             predicted_rep_period_and_max_position(max_start, max_end, inputLen, &predicted_rep_period, &max_pos, 4);
 #ifdef DEBUG_window_kmer
@@ -575,6 +623,11 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
 #endif
             //fill_directional_index(inputLen, max_w, max_k);
             find_tandem_repeat(max_start, max_end, predicted_rep_period, readID, inputLen, &RRs[0], &RRs[1]);
+            
+            
+            gettimeofday(&e_time, NULL);
+            time_period
+            += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
             
             if(RRs[0].repeat_len > 0){
                 print_one_repeat_in_read(RRs[0]);
@@ -587,7 +640,6 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         }else{
             break;
         }
-
     }
 }
 

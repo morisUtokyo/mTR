@@ -13,12 +13,13 @@
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
-#define maxKmer 11              // Increase this when no qualified repeats are found.
+#define maxKmer1 8
+#define maxKmer2 11              // Increase this when no qualified repeats are found.
 #define BLK 1024                // Block size of input buffer.
 #define MAX_PERIOD 500          // Maximum period length
 #define MIN_PERIOD 2            // Minimum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
-#define WrapDPsize  10000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
+#define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
 #define MISMATCH_PENALTY -1
@@ -95,8 +96,9 @@ void print_one_repeat_in_read(repeat_in_read rr);
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
+//#define DEBUG_incremental
 
 //#define DEBUG_window_kmer
 
-//#define DEBUG_incremental
+float time_all, time_memory, time_range, time_period, time_predicted_rep_period_and_max_position, time_wrap_around_DP, time_search_De_Bruijn_graph, time_progressive_multiple_alignment, time_count_table;
 

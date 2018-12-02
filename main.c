@@ -36,20 +36,34 @@ int main(int argc, char *argv[])
     }
     
     // Process one file to associate reads with tandem repeats
+    time_all = 0; time_memory = 0; time_range = 0; time_period = 0;
+    
     struct timeval s, e;
-    int read_cnt;
-
     gettimeofday(&s, NULL);
     
     inputFile = argv[2];
     fprintf(stderr, "The input file name is %s.\n", inputFile);
-             
-    read_cnt = handle_one_file(inputFile, print_multiple_TR);
-             
-    fprintf(stderr, "Number of all reads in the input fasta file %s is %i.\n", inputFile, read_cnt);
+    int read_cnt = handle_one_file(inputFile, print_multiple_TR);
+    fprintf(stderr, "Number of all reads in the input fasta file\n %s is %i.\n", inputFile, read_cnt);
     
     gettimeofday(&e, NULL);
-    fprintf(stderr, "time for finding repeats = %lf\n", (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6);
+    time_all = (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
+    //fprintf(stderr, "Computational time\n");
+    fprintf(stderr, "%f\tall\n",           time_all);
+    
+    fprintf(stderr, "%f\tallocating memory\n", time_memory);
+    
+    fprintf(stderr, "%f\tranges\n",         time_range);
+    
+    fprintf(stderr, "%f\tComputing periods\n", time_period);
+    fprintf(stderr, "\t%f\tpreparation\n",    time_predicted_rep_period_and_max_position);
+    fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
+    fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
+    fprintf(stderr, "\t%f\tprogressive\n",   time_progressive_multiple_alignment);
+    fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
+    
+
     
     return EXIT_SUCCESS;
 }
