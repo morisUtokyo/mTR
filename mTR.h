@@ -13,7 +13,7 @@
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
-#define maxKmer1 8
+#define maxKmer1 9
 #define maxKmer2 11              // Increase this when no qualified repeats are found.
 #define BLK 1024                // Block size of input buffer.
 #define MAX_PERIOD 500          // Maximum period length

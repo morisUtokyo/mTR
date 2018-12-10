@@ -264,7 +264,7 @@ void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, ch
     k_min = MIN(predicted_rep_period, minKmer);
     int freq_periods = (max_end - max_start)/predicted_rep_period;
     k_max = maxKmer2;
-    if(predicted_rep_period <= 10 & freq_periods < 150){
+    if(predicted_rep_period <= 10 & freq_periods < 300){
         k_max = maxKmer1;
     }
     
@@ -274,13 +274,17 @@ void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, ch
         find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
         
         if( max_matches < rr->Num_matches &&
-            MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
-            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
-            //rr->rep_period < predicted_rep_period * 2 && // This ad hoc rule is removed.
-            MIN_PERIOD <= rr->rep_period )
+           MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
+           MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
+           MIN_PERIOD <= rr->rep_period )
         {
-            max_matches = rr->Num_matches;
-            *tmp_rr = *rr;
+            // An ad hoc rule. Remove overestimated units of length < 10
+            if((predicted_rep_period <= 10 && rr->rep_period < predicted_rep_period * 2) ||
+               predicted_rep_period > 10)
+            {
+                max_matches = rr->Num_matches;
+                *tmp_rr = *rr;
+            }
         }
     }
     *rr = *tmp_rr;
@@ -604,9 +608,8 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
             // Sizes of windows
             if(w <= 50){       w += 10;
             }else if(w < 100){  w += 20;
-            //}else if(w < 500){  w += 50;
-            }else if(w < 1000){  w += 100;   // 100
-            }else{              w += 2000;  // 1000
+            }else if(w < 1000){  w += 100;   // to increase the accuracy, 50 (200) is too small (large)
+            }else{              w += 1000;  // 1000
             }
         }
         gettimeofday(&e_time, NULL);

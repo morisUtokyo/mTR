@@ -36,6 +36,11 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
     int max_j = 0;
     for(i=1; i<=rep_len; i++){        // Scan rep
         for(j=1; j<=unit_len; j++){   // Scan rep_unit
+            if( WrapDPsize <= next*i + j ){
+                fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
+                exit(EXIT_FAILURE);
+            }
+            
             if(rep[i-1] == rep_unit[j-1]){    // 0-origin index !!!!
                 WrapDP[next*i + j] =
                 WrapDP[next*(i-1) + j-1] + MATCH_GAIN;
