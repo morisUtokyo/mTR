@@ -13,7 +13,7 @@
 
 void print_one_repeat_in_read(repeat_in_read rr){
     printf(
-            "%.10s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
+            "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
             //rr.ID,
             rr.readID,
             rr.inputLen,

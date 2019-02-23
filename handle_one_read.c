@@ -606,11 +606,14 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
                 found = 1;
             }
             // Sizes of windows
+            
             if(w <= 50){       w += 10;
             }else if(w < 100){  w += 20;
             }else if(w < 1000){  w += 100;   // to increase the accuracy, 50 (200) is too small (large)
             }else{              w += 1000;  // 1000
             }
+        
+            //w += 100;
         }
         gettimeofday(&e_time, NULL);
         time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
