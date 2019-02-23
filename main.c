@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
     time_all = (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
     //fprintf(stderr, "Computational time\n");
+    /*
     fprintf(stderr, "%f\tall\n",           time_all);
     
     fprintf(stderr, "%f\tallocating memory\n", time_memory);
@@ -63,7 +64,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
     fprintf(stderr, "\t%f\tprogressive\n",   time_progressive_multiple_alignment);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
-    
+    */
 
     
     return EXIT_SUCCESS;
