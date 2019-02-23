@@ -99,6 +99,7 @@ void print_one_repeat_in_read(repeat_in_read rr);
 //#define DEBUG_incremental
 
 //#define DEBUG_window_kmer
+//#define PRINT_COMP_TIME
 
 float time_all, time_memory, time_range, time_period, time_predicted_rep_period_and_max_position, time_wrap_around_DP, time_search_De_Bruijn_graph, time_progressive_multiple_alignment, time_count_table;
 
