@@ -564,7 +564,12 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *
             break;
         }
     }
-    if(print_multiple_TR == 0 && max_pos < min_pos){
+    // We here avoid searching ranges of tandem repeats if the maximum DI fails to be more than 0.5 (=MIN_MAX_DI),
+    // because 0.6 or more were too stringent to detect true tandem repeats
+    if(print_multiple_TR == 0
+       && max_pos < min_pos
+       && MIN_MAX_DI < max_DI   // A crucial parameter
+       ){
         // For the mode of finding one tandem repeat print_multiple_TR == 0)
         found = 1;
     }
@@ -580,6 +585,7 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
     
     struct timeval s_time, e_time;
     
+    // Locate the non-overlapping regions of tandem repeats
     int search_pos = 0;
     while(search_pos < inputLen){
         double max_measure = 0;

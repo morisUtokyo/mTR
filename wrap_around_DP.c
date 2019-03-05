@@ -12,7 +12,7 @@
 #include "mTR.h"
 
 
-// We used a global alignment algorithm in place of a local alignment that outpurs shorter alignments.
+// We used a local alignment algorithm in place of a global alignment that outputs lengthy alignments.
 void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
                     int *actual_start,      int *actual_end,
                     int *return_rep_len,    int *return_freq_unit,
@@ -28,9 +28,16 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
 #endif
     
     // Initialization
+#ifdef LOCAL_ALIGNMENT
+    for(j=0; j<=rep_len; j++){   // Scan rep_unit
+        WrapDP[next*0 + j] = 0; // local alignment
+    }
+#else
     for(j=0; j<=rep_len; j++){   // Scan rep_unit
         WrapDP[next*0 + j] = INDEL_PENALTY * j; // global alignment
     }
+#endif
+    
     int max_wrd = 0;
     int max_i = 0;
     int max_j = 0;
@@ -46,14 +53,27 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
                 WrapDP[next*(i-1) + j-1] + MATCH_GAIN;
             }else{
                 if(j == 1){
+#ifdef LOCAL_ALIGNMENT
+                    WrapDP[next*i + j] = MAX(0, MAX(
+                                             WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
+                                             WrapDP[next*(i-1) + j]   + INDEL_PENALTY));
+#else
                     WrapDP[next*i + j] = MAX(
                                          WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
                                          WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+#endif
                 }else{
+#ifdef LOCAL_ALIGNMENT
+                    WrapDP[next*i + j] = MAX(0, MAX( MAX(
+                                          WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
+                                          WrapDP[next*i + j-1]     + INDEL_PENALTY),
+                                          WrapDP[next*(i-1) + j]   + INDEL_PENALTY));
+#else
                     WrapDP[next*i + j] = MAX( MAX(
                                           WrapDP[next*(i-1) + j-1] + MISMATCH_PENALTY,
                                           WrapDP[next*i + j-1]     + INDEL_PENALTY),
                                           WrapDP[next*(i-1) + j]   + INDEL_PENALTY);
+#endif
                 }
             }
             if(max_wrd < WrapDP[next*i+j]){

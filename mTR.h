@@ -20,10 +20,13 @@
 #define MIN_PERIOD 2            // Minimum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
+#define MIN_MAX_DI 0.4
+
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
 #define MISMATCH_PENALTY -1
-#define INDEL_PENALTY -1
+#define INDEL_PENALTY -3        // -3 or larger values are ineffective in removing insertion errors
+
 //  Choice of DeBruijn graph or progressive multiple alignment
 #define ProgressiveMultipleAlignment 0
 #define DeBruijnGraphSearch 1
@@ -99,7 +102,8 @@ void print_one_repeat_in_read(repeat_in_read rr);
 //#define DEBUG_incremental
 
 //#define DEBUG_window_kmer
-//#define PRINT_COMP_TIME
+#define PRINT_COMP_TIME
+#define LOCAL_ALIGNMENT
 
 float time_all, time_memory, time_range, time_period, time_predicted_rep_period_and_max_position, time_wrap_around_DP, time_search_De_Bruijn_graph, time_progressive_multiple_alignment, time_count_table;
 
