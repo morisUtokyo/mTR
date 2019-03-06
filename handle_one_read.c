@@ -555,10 +555,11 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *
             min_pos = i;
             min_DI  = directional_index[min_pos];
         }
-        if( print_multiple_TR == 1 &&
-            max_pos + w < i &&
-            max_pos + w < min_pos &&
-            min_pos + w < i )
+        if( print_multiple_TR == 1
+           && max_pos + w < i
+           && max_pos + w < min_pos
+           //&& min_pos + w < i
+           )
         {   // max_pos and min_pos are locally maximum and minimum, respectively and are distant apart >= w bases.
             found = 1;
             break;
@@ -588,7 +589,6 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
     // Locate the non-overlapping regions of tandem repeats
     int search_pos = 0;
     while(search_pos < inputLen){
-        double max_measure = 0;
         int found = 0;
         int max_w, max_k, tmp_start, tmp_end, max_start, max_end;
         double tmp_DI = 0;
@@ -597,6 +597,7 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         // A new strategy
         gettimeofday(&s_time, NULL);
         int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
+        double max_measure = 0;
         for(int w = 20; w < 5000; ){
             fill_directional_index(inputLen, w, k);
             int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
@@ -612,14 +613,11 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
                 found = 1;
             }
             // Sizes of windows
-            
             if(w <= 50){       w += 10;
             }else if(w < 100){  w += 20;
             }else if(w < 1000){  w += 100;   // to increase the accuracy, 50 (200) is too small (large)
             }else{              w += 1000;  // 1000
             }
-        
-            //w += 100;
         }
         gettimeofday(&e_time, NULL);
         time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;

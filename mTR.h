@@ -20,7 +20,7 @@
 #define MIN_PERIOD 2            // Minimum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
-#define MIN_MAX_DI 0.4
+#define MIN_MAX_DI 0.4          // For filtering out reads with no meaningful tandem repeats
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
@@ -101,7 +101,7 @@ void print_one_repeat_in_read(repeat_in_read rr);
 //#define DEBUG_progressive_multiple_alignment
 //#define DEBUG_incremental
 
-//#define DEBUG_window_kmer
+#define DEBUG_window_kmer
 #define PRINT_COMP_TIME
 #define LOCAL_ALIGNMENT
 
