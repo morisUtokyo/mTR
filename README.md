@@ -1,13 +1,12 @@
 # mTR
 Use Makefile to generate an executable file "mTR".
 
-Execution
-mTR -m|-r <fasta file> 
+usage:   mTR [-smb] <fasta file> 
 
-Arguments
+-s: Find a single tandem repeat in each read. 
+-m: Find multiple different tandem repeats.
+-b: Use this option if longer blocks of tandem repeats are preferable
 
--r: Find one tandem repeat in each read. 
--m: Output multiple occurrences of different tandem repeats.
 
 /*-----------------------------------------
 Features associated with one read with repeats

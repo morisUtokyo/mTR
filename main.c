@@ -20,16 +20,30 @@ void print_error_message(){
 int main(int argc, char *argv[])
 {
     // <command> -m <fasta file>    Feed <fasta file>, detect repeats, and print <clustering results>.
-    // <command> -r <fasta file>    Feed <fasta file> and print <reads with repeats>.
+    // <command> -s <fasta file>    Feed <fasta file> and print <reads with repeats>.
 
     
     char *inputFile;
-    int print_multiple_TR;
-    
-    if(argc == 3 && (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "-r") == 0)){
-        print_multiple_TR = 0;
-        if(strcmp(argv[1], "-m") == 0 ){
-            print_multiple_TR = 1;
+    int print_multiple_TR = 0;
+    int use_big_window = 0;
+
+    if(argc == 3){
+        char *p;
+        p=argv[1];
+        if(*p == '-' ){
+            for(p++; *p != '\0'; p++){
+                switch(*p){
+                    case 'm':   print_multiple_TR = 1; break;
+                    case 'b':   use_big_window = 1; break;
+                }
+            }
+            if(use_big_window == 1){
+                min_window_size = MIN_BIG_WINDOW;
+                max_window_size = MAX_BIG_WINDOW;
+            }else{
+                min_window_size = MIN_WINDOW;
+                max_window_size = MAX_WINDOW;
+            }
         }
     }else{
         print_error_message();
@@ -45,7 +59,7 @@ int main(int argc, char *argv[])
     inputFile = argv[2];
     fprintf(stderr, "The input file name is %s.\n", inputFile);
     int read_cnt = handle_one_file(inputFile, print_multiple_TR);
-    fprintf(stderr, "Number of all reads in the input fasta file\n %s is %i.\n", inputFile, read_cnt);
+    fprintf(stderr, "Number of reads in the input %s is %i.\n", inputFile, read_cnt);
     
     gettimeofday(&e, NULL);
     time_all = (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;

@@ -598,7 +598,7 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
         gettimeofday(&s_time, NULL);
         int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
         double max_measure = 0;
-        for(int w = 20; w < 5000; ){
+        for(int w = min_window_size; w < max_window_size; ){
             fill_directional_index(inputLen, w, k);
             int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
             
@@ -613,10 +613,16 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
                 found = 1;
             }
             // Sizes of windows
-            if(w <= 50){       w += 10;
-            }else if(w < 100){  w += 20;
-            }else if(w < 1000){  w += 100;   // to increase the accuracy, 50 (200) is too small (large)
-            }else{              w += 1000;  // 1000
+            if(w <= 50){
+                w += 10;
+            }else if(w < 100){
+                w += 20;
+            }else if(w < 1000){
+                w += 100;
+            }else if(w < 10000){
+                w += 1000;
+            }else{
+                w += 10000;
             }
         }
         gettimeofday(&e_time, NULL);

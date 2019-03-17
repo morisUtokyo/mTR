@@ -8,8 +8,8 @@
 
 // Key parameters
 
-#define MAX_INPUT_LENGTH 200000  // The maximum length of each read
-#define MIN_MATCH_RATIO 0.7      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
+#define MAX_INPUT_LENGTH 1000000  // The maximum length of each read
+#define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
@@ -21,6 +21,12 @@
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
 #define MIN_MAX_DI 0.4          // For filtering out reads with no meaningful tandem repeats
+
+// Window size parameters for locating the boundaries of tandem repeats
+#define MIN_WINDOW 20
+#define MAX_WINDOW 5000
+#define MIN_BIG_WINDOW 1000
+#define MAX_BIG_WINDOW 100000
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
@@ -48,6 +54,7 @@ int *rep_unit_string;   // String of representative unit of the focal repeat. Th
 int *WrapDP;            // 2D space for Wrap-around global alignment DP for handling tandem repeats
                         // The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 int **consensus, **gaps;  // Space for consensus
+int min_window_size, max_window_size;
 
 typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     ID;  // 0,1,2,...
@@ -100,7 +107,6 @@ void print_one_repeat_in_read(repeat_in_read rr);
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
 //#define DEBUG_incremental
-
 //#define DEBUG_window_kmer
 //#define PRINT_COMP_TIME
 #define LOCAL_ALIGNMENT
