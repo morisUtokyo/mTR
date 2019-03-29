@@ -25,8 +25,8 @@
 // Window size parameters for locating the boundaries of tandem repeats
 #define MIN_WINDOW 20
 #define MAX_WINDOW 5000
-#define MIN_BIG_WINDOW 1000
-#define MAX_BIG_WINDOW 100000
+#define MIN_BIG_WINDOW 5000
+#define MAX_BIG_WINDOW 50000
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
@@ -83,8 +83,8 @@ repeat_in_read *RRs;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-int handle_one_file(char *inputFile, int print_multiple_TR);
-void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR);
+int handle_one_file(char *inputFile, int print_multiple_TR, int use_big_window);
+void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int use_big_window);
 
 int progressive_multiple_alignment(
    int max_start, int max_end, int max_pos,

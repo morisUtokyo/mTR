@@ -11,6 +11,7 @@
 #include <math.h>
 #include <string.h>
 #include "mTR.h"
+#include "MT.h"
 
 void print_4_decimals(int val, int len){
     if(len > 0){
@@ -237,6 +238,12 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
 
 void init_inputString(int k, int inputLen){
     
+    init_genrand(0);
+    
+    for(int i=0; i<MAX_INPUT_LENGTH; i++){
+        inputString[i] = (int)(genrand_int32()%4);
+    }
+    
     for(int i=0; i<inputLen; i++){
         inputString[i] = orgInputString[i];
     }
@@ -253,7 +260,6 @@ void init_inputString(int k, int inputLen){
         }
     }
 }
-
 
 void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, char *readID, int inputLen,  repeat_in_read *rr, repeat_in_read *tmp_rr ){
     
@@ -333,21 +339,55 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
     return(DI);
 }
 
+void init_inputString_surrounded_by_random_seq(int k, int inputLen){
+    init_genrand(0);
+    
+    for(int i=0; i<MAX_INPUT_LENGTH; i++){
+        inputString[i] = (int)(genrand_int32()%4);
+    }
+    for(int i = 0; i < inputLen; i++){
+        inputString[i] = (int)(genrand_int32()%4);
+    }
+    for(int i = inputLen; i < inputLen*2; i++){
+        inputString[i] = orgInputString[i - inputLen];
+    }
+    for(int i = inputLen*2; i < inputLen*3; i++){
+        inputString[i] = (int)(genrand_int32()%4);
+    }
+    int tmp = 0;
+    for(int i=0; i<(k-1); i++){
+        tmp = 4 * tmp + inputString[i];  // compute 4 decimal of first k-1 letters
+    }
+    for(int i=0; i<(inputLen*3 - k+1); i++){
+        inputString[i] = 4 * tmp + inputString[i+k-1];
+        tmp = inputString[i] % pow4[k-1]; //　remainder, compute 4 decimal of length k-1
+        if(tmp < 0){
+            fprintf(stderr, "fatal error at %i\t %i \t%i\n", i, inputString[i], pow4[k-1] );
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 void fill_directional_index(int inputLen, int w, int k){
-    // initialized inputString with a given value for k
-    init_inputString(k, inputLen);
+    
     // initialize directional _index
     for(int i=0; i<MAX_INPUT_LENGTH; i++){
         directional_index[i] = 0;
     }
     // initialize vectors
     for(int i=0; i < 4 * BLK; i++){
-        vector0[i] = 0; vector1[i] = 0; vector2[i] = 0;
+        // We set the three vectors to the vectors with 1s in place of the zero vector.
+        vector0[i] = 0;
+        vector1[i] = 0;
+        vector2[i] = 0;
     }
     // At the initial step, assume that vector0, the window ending at (i-1), is the empty vector filled with zero
-    for(int i=0; i < w && i < (inputLen - w - k + 1); i++){
-        vector1[ inputString[i] ]++;
-        vector2[ inputString[i + w] ]++;
+    //for(int i=0; i < w && i < (inputLen - w - k + 1); i++){
+    //for(int i = search_pos; i < search_pos + w && i < (end_pos - w - k + 1); i++){
+    for(int i=0; i<w; i++){
+        vector0[ inputString[i] ]++;
+        vector1[ inputString[i + w] ]++;
+        vector2[ inputString[i + w*2] ]++;
     }
     // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
     // Compute the initial values for s(sum), q(squared sum), and ip(inner product)
@@ -364,7 +404,14 @@ void fill_directional_index(int inputLen, int w, int k){
         ip_12  += vector1[i] * vector2[i];
     }
     // Shift vector0/1/2 starting from i=1 can calculate directional indexes
-    for(int i=0; i < (inputLen - w - k + 1); i++){
+    //for(int i=0; i < (inputLen - w - k + 1); i++){
+    for(int i=0; i < (inputLen*3 - w*3 - k + 1); i++){
+        if(s_0 == s_1 && s_1 == s_2){}
+        else{
+            fprintf(stderr, "inconsistency in fill_directional_index\n");
+            exit(EXIT_FAILURE);
+            
+        }
         // Compute the directional index at i
         double sd_0    = sqrt(q_0 * pow4[k] - s_0 * s_0);
         double sd_1    = sqrt(q_1 * pow4[k] - s_1 * s_1);
@@ -372,7 +419,7 @@ void fill_directional_index(int inputLen, int w, int k){
         double P_01, P_12;
         if(sd_0*sd_1 > 0){
             P_01 = (ip_01 * pow4[k] - s_0 * s_1)/(sd_0 * sd_1);
-        }else{
+        }else{  // When one of the two SDs is zero.
             P_01 = 0;
         }
         if(sd_1*sd_2 > 0){
@@ -381,44 +428,25 @@ void fill_directional_index(int inputLen, int w, int k){
             P_12 = 0;
         }
         double DI =  P_12 - P_01;
-        directional_index[i] = DI;
+        directional_index[i+w] = DI;    // Note that DI is computed for position i+w (NOT i !!)
 
-#ifdef DEBUG_incremental
-        fprintf(stderr, "Incre\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", s_0, s_1, s_2, q_0, q_1, q_2, ip_01, ip_12);
-        double DI_for_confirmation = DI_index(vector0, vector1, vector2, k);
-        fprintf(stderr, "DI\t%i\t%f\t%f\n", i, DI, DI_for_confirmation);
-        if(DI != DI_for_confirmation){
-            exit(EXIT_FAILURE);
-        }
-#endif
-        
         //-------------------------------------------------------------------
         // Incremental updates of s, q, and ip
         
         // Determine positions to be updated
         // dec_i_v0 means the position in vector0 was decremented.
         int dec_i_v0, inc_i_v0, dec_i_v1, inc_i_v1, dec_i_v2, inc_i_v2;
-        if(0 <= i-w){
-            dec_i_v0 = inputString[i-w];
-        }else{
-            dec_i_v0 = -1;  // decrement no element
-        }
-        inc_i_v0 = inputString[i];
-        dec_i_v1 = inputString[i];
-        inc_i_v1 = inputString[i + w];
-        dec_i_v2 = inputString[i + w];
-        if(i + w*2 < inputLen - k + 1){
-            inc_i_v2 = inputString[i + w*2];
-        }else{
-            inc_i_v2 = -1;  // increment no element
-        }
+        dec_i_v0 = inputString[i];
+        inc_i_v0 = inputString[i + w];
+        dec_i_v1 = inputString[i + w];
+        inc_i_v1 = inputString[i + w*2];
+        dec_i_v2 = inputString[i + w*2];
+        inc_i_v2 = inputString[i + w*3];
         
         // Subtract changes before updates
         // vector0, decrement
-        if(dec_i_v0 > -1){
-            q_0   -= pow(vector0[ dec_i_v0 ], 2);
-            ip_01 -= vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
-        }
+        q_0   -= pow(vector0[ dec_i_v0 ], 2);
+        ip_01 -= vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
         // vector0, increment
         if(inc_i_v0 != dec_i_v0){
             q_0   -= pow(vector0[ inc_i_v0 ], 2);
@@ -431,43 +459,35 @@ void fill_directional_index(int inputLen, int w, int k){
         ip_12 -= vector1[ dec_i_v1 ] * vector2[ dec_i_v1 ];
         // vector 1, increment
         if(inc_i_v1 != dec_i_v1){
-                q_1   -= pow(vector1[ inc_i_v1 ], 2);
+            q_1   -= pow(vector1[ inc_i_v1 ], 2);
             if(inc_i_v1 != dec_i_v0){
                 ip_01 -= vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
             }
-                ip_12 -= vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
+            ip_12 -= vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
         }
         // vector2, decrement
         q_2   -= pow(vector2[ dec_i_v2 ], 2);
             // ip_12 -= vector1[ dec_i_v2 ] * vector2[ dec_i_v2 ];
             // duplicated as inc_i_c1 == dec_i_v2
         // vector2, increment
-        if(inc_i_v2 > -1){
-            if(inc_i_v2 != dec_i_v2){
-                    q_2   -= pow(vector2[ inc_i_v2 ], 2);
-                if(inc_i_v2 != dec_i_v1){
-                    ip_12 -= vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
-                }
+        if(inc_i_v2 != dec_i_v2){
+            q_2   -= pow(vector2[ inc_i_v2 ], 2);
+            if(inc_i_v2 != dec_i_v1){
+                ip_12 -= vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
             }
         }
         
         // Update vectors and save the previous values before decrement/increment vectors
-        if(dec_i_v0 > -1){
         vector0[ dec_i_v0 ]--;  s_0--;
-        }
         vector0[ inc_i_v0 ]++;  s_0++;
         vector1[ dec_i_v1 ]--;  s_1--;
         vector1[ inc_i_v1 ]++;  s_1++;
         vector2[ dec_i_v2 ]--;  s_2--;
-        if(inc_i_v2 > -1){
-        vector2[ inc_i_v2 ]++; s_2++;
-        }
+        vector2[ inc_i_v2 ]++;  s_2++;
         // Add changes after updates
         // vector0, decrement
-        if(dec_i_v0 > -1){
-            q_0   += pow(vector0[ dec_i_v0 ], 2);
-            ip_01 += vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
-        }
+        q_0   += pow(vector0[ dec_i_v0 ], 2);
+        ip_01 += vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
         // vector0, increment
         if(inc_i_v0 != dec_i_v0){
             q_0   += pow(vector0[ inc_i_v0 ], 2);
@@ -480,100 +500,76 @@ void fill_directional_index(int inputLen, int w, int k){
         ip_12 += vector1[ dec_i_v1 ] * vector2[ dec_i_v1 ];
         // vector 1, increment
         if(inc_i_v1 != dec_i_v1){
-                q_1   += pow(vector1[ inc_i_v1 ], 2);
+            q_1   += pow(vector1[ inc_i_v1 ], 2);
             if(inc_i_v1 != dec_i_v0){
                 ip_01 += vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
             }
-                ip_12 += vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
+            ip_12 += vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
         }
         // vector2, decrement
         q_2   += pow(vector2[ dec_i_v2 ], 2);
             // ip_12 += vector1[ dec_i_v2 ] * vector2[ dec_i_v2 ];
             // duplicated as inc_i_c1 == dec_i_v2
         // vector2, increment
-        if(inc_i_v2 > -1){
-            if(inc_i_v2 != dec_i_v2){
-                    q_2   += pow(vector2[ inc_i_v2 ], 2);
-                if(inc_i_v2 != dec_i_v1){
-                    ip_12 += vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
-                }
+        if(inc_i_v2 != dec_i_v2){
+            q_2   += pow(vector2[ inc_i_v2 ], 2);
+            if(inc_i_v2 != dec_i_v1){
+                ip_12 += vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
             }
         }
     }
 }
 
-/*
-// Not an incremental algorithm
-void fill_directional_index(int inputLen, int w, int k){
-    // initialized inputString with a given value for k
-    init_inputString(k, inputLen);
-    // initialize directional _index
-    for(int i=0; i<MAX_INPUT_LENGTH; i++){
-        directional_index[i] = 0;
-    }
-    // initialize vectors
-    for(int i=0; i < 4 * BLK; i++){
-        vector0[i] = 0; vector1[i] = 0; vector2[i] = 0;
-    }
-    // At the initial step, assume that vector0, the window ending at (i-1), is the empty vector filled with zero
-    for(int i=0; i < w && i < (inputLen - w - k + 1); i++){
-        vector1[ inputString[i] ]++;
-        vector2[ inputString[i + w] ]++;
-    }
-    // Shift vector0/1/2 starting from i=1 can calculate directional indexes
-    for(int i=0; i < (inputLen - w - k + 1); i++){
-        if(0 <= i-w){
-            vector0[ inputString[i-w] ]--;
-        }
-        vector0[ inputString[i] ]++;
-        vector1[ inputString[i] ]--;
-        vector1[ inputString[i + w] ]++;
-        vector2[ inputString[i + w] ]--;
-        if(w*2 < inputLen - k + 1){
-            vector2[ inputString[i + w*2] ]++;
-        }
-        // starting index at the i-th position
-        directional_index[i] = (double)DI_index(vector0, vector1, vector2, k);
-        //printf("%c\t%0.2f ", dec2char(orgInputString[i]), directional_index[i]);
-    }
-}
-*/
 
-int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR){
+int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int end_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR, int use_big_window){
     
-    int found = 0;
+    fill_directional_index(inputLen, w, k);
+    /*
+    fprintf(stderr, "w=%i\n", w);
+    for(int i=inputLen; i<inputLen*2; i++){
+        fprintf(stdout, "%i,%f\n", i-inputLen, directional_index[i]);
+    }
+    exit(EXIT_FAILURE);
+     */
+    
+
+    // Search for a position with the maximum value
     int max_pos = search_pos;
     double max_DI = 0;
-    int min_pos = search_pos;
-    double min_DI = 0;
-    for(int i=search_pos; i < (inputLen - w - k + 1); i++){
-        if(max_DI < directional_index[i]){
+    for(int i=search_pos; i < end_pos - w; i++){
+        if( max_DI < directional_index[i] ){
             max_pos = i;
             max_DI  = directional_index[max_pos];
         }
-        if(directional_index[i] < min_DI){
+    }
+    
+    // Search for a position with the minimum value after max_pos
+    int min_pos = max_pos;
+    double min_DI = (-1)*MIN_MAX_DI; // min_DI < (-1)*MIN_MAX_DI
+    int found = 0;
+    for(int i=max_pos; i < end_pos - w; i++){
+        if( directional_index[i] < min_DI ){
             min_pos = i;
             min_DI  = directional_index[min_pos];
         }
-        if( print_multiple_TR == 1
-           && max_pos + w < i
+        // This rule is an ad hoc rule for detecting multiple BIG TRs and may need revision.
+        if(   print_multiple_TR == 1
+           && use_big_window == 1
            && max_pos + w < min_pos
-           //&& min_pos + w < i
-           )
-        {   // max_pos and min_pos are locally maximum and minimum, respectively and are distant apart >= w bases.
+        ){
             found = 1;
             break;
         }
     }
-    // We here avoid searching ranges of tandem repeats if the maximum DI fails to be more than 0.5 (=MIN_MAX_DI),
-    // because 0.6 or more were too stringent to detect true tandem repeats
-    if(print_multiple_TR == 0
-       && max_pos < min_pos
-       && MIN_MAX_DI < max_DI   // A crucial parameter
-       ){
-        // For the mode of finding one tandem repeat print_multiple_TR == 0)
-        found = 1;
+    
+    if(max_pos + w * 3 < min_pos){      // Using width of w*3 is somewhat ad hoc but works.
+        if(print_multiple_TR == 1 ||
+           MIN_MAX_DI < max_DI          // Prune uninformative ranges when we look for a single TR.
+        ){
+            found = 1;
+        }
     }
+    
     if(found == 1){
         *max_start = max_pos;
         *max_end   = min_pos + w;
@@ -582,34 +578,40 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int *
     return(found);
 }
 
-void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR){
-    
+
+
+
+void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int print_multiple_TR, int use_big_window){
     struct timeval s_time, e_time;
     
+    int max_w, max_k, max_start, max_end;
+    
     // Locate the non-overlapping regions of tandem repeats
-    int search_pos = 0;
-    while(search_pos < inputLen){
+    if(search_pos < end_pos){
         int found = 0;
-        int max_w, max_k, tmp_start, tmp_end, max_start, max_end;
         double tmp_DI = 0;
         double max_DI = 0;
+        int tmp_start, tmp_end;
         
-        // A new strategy
+        // Search for an optimal range with a candidate tandem repeat
         gettimeofday(&s_time, NULL);
         int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
-        double max_measure = 0;
+        init_inputString_surrounded_by_random_seq(k, inputLen);
+                // Put random sequences of the input length before and after the input string
+        
         for(int w = min_window_size; w < max_window_size; ){
-            fill_directional_index(inputLen, w, k);
-            int found_one = find_best_candidate_region(inputLen, w, k, search_pos, &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR);
+            int found_one =
+            find_best_candidate_region(
+                inputLen, w, k, search_pos + inputLen, end_pos + inputLen,
+                &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR, use_big_window);
+            // As random sequences of length inputLen are added, move the positions by inputLen.
             
-            double tmp_measure = tmp_DI;
-            if(found_one == 1 && max_measure < tmp_measure) {
-                max_measure = tmp_measure;
+            if(found_one == 1 && max_DI < tmp_DI) {
+                max_DI    = tmp_DI;
                 max_w = w;
                 max_k = k;
                 max_start = tmp_start;
                 max_end   = tmp_end;
-                max_DI    = tmp_DI;
                 found = 1;
             }
             // Sizes of windows
@@ -625,38 +627,56 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multipl
                 w += 10000;
             }
         }
+        
+        // Reset the positions and determine the "optimal" tandem repeat in the range
+        int query_start = max_start - inputLen;
+        int query_end   = max_end   - inputLen;
+        
+        
         gettimeofday(&e_time, NULL);
         time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
-
         
         if(found){
             gettimeofday(&s_time, NULL);
             
             int predicted_rep_period, max_pos;
-            predicted_rep_period_and_max_position(max_start, max_end, inputLen, &predicted_rep_period, &max_pos, 4);
-#ifdef DEBUG_window_kmer
-            printf("w=%i\tk=%i\t[%i, %i, \t%i]\t%i\n", max_w, max_k, max_start, max_end, (max_end - max_start + 1), predicted_rep_period);
-#endif
-            //fill_directional_index(inputLen, max_w, max_k);
-            find_tandem_repeat(max_start, max_end, predicted_rep_period, readID, inputLen, &RRs[0], &RRs[1]);
-            
+            init_inputString(max_k, inputLen);  // Regenerate the inputString from the original input
+            predicted_rep_period_and_max_position( query_start, query_end, inputLen, &predicted_rep_period, &max_pos, 4);
+            find_tandem_repeat( query_start, query_end ,
+                predicted_rep_period, readID, inputLen, &RRs[0], &RRs[1]);
             
             gettimeofday(&e_time, NULL);
             time_period
             += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
             
+            repeat_in_read tmp_rr;
             if(RRs[0].repeat_len > 0){
-                print_one_repeat_in_read(RRs[0]);
+                tmp_rr = RRs[0];
+                int repeat_start   = tmp_rr.rep_start;
+                int repeat_end     = tmp_rr.rep_end;
+                
+                // Perform recursively
+                if(print_multiple_TR == 1){
+                    handle_one_TR(readID, inputLen, search_pos, repeat_start,  print_multiple_TR, use_big_window);
+#ifdef DEBUG_window_kmer
+                    fprintf(stderr, "w=%i\t\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
+#endif
+                    print_one_repeat_in_read(tmp_rr);
+                    handle_one_TR(readID, inputLen, repeat_end, end_pos,    print_multiple_TR, use_big_window);
+                }else{
+#ifdef DEBUG_window_kmer
+                    fprintf(stderr, "w=%i\t\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
+#endif
+                    print_one_repeat_in_read(tmp_rr);
+                }
             }
-            if(print_multiple_TR == 1){
-                search_pos = max_end;
-            }else{
-                break;
-            }
-        }else{
-            break;
         }
     }
+
+}
+
+void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR, int use_big_window){
+    handle_one_TR(readID, inputLen, 0, inputLen, print_multiple_TR, use_big_window);
 }
 
 

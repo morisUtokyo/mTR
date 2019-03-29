@@ -126,7 +126,7 @@ void free_global_variables(){
     
 }
 
-int handle_one_file(char *inputFile, int print_multiple_TR){
+int handle_one_file(char *inputFile, int print_multiple_TR, int use_big_window){
     //---------------------------------------------------------------------------
     // Feed a string from a file, convert the string into a series of integers
     //---------------------------------------------------------------------------
@@ -162,7 +162,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR){
                 firstRead = 0;
             }else{  // Process the previous read if the current read is not the first one.
                 inputLen = cnt;
-                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
+                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, use_big_window);
                 read_cnt++;
             }
             // Feed the header of the read.
@@ -195,7 +195,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR){
         }
     }
     inputLen = cnt;
-    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
+    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, use_big_window);
     read_cnt++;
 
     

@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
     
     inputFile = argv[2];
     fprintf(stderr, "The input file name is %s.\n", inputFile);
-    int read_cnt = handle_one_file(inputFile, print_multiple_TR);
-    fprintf(stderr, "Number of reads in the input %s is %i.\n", inputFile, read_cnt);
+    int read_cnt = handle_one_file(inputFile, print_multiple_TR, use_big_window);
+    fprintf(stderr, "Number of reads is %i.\n", read_cnt);
     
     gettimeofday(&e, NULL);
     time_all = (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
