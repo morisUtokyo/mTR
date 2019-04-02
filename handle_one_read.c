@@ -38,7 +38,6 @@ char dec2char(int val){
     return(return_char);
 }
 
-
 void print_4_decimal_array(int* val, int len, char *return_string){
     strcpy(return_string, "");
     for(int i=0; i<len; i++){
@@ -93,7 +92,6 @@ void predicted_rep_period_and_max_position(int max_start, int max_end, int input
     for(int i = max_start; i <= max_end; i++){ count[ inputString[i] ]++; }    // Perform counting
     for(int i = 1; i < pow4[k]; i++){ count[i] = count[i-1] + count[i]; }
     
-    
     gettimeofday(&e, NULL);
     time_count_table
     += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
@@ -102,7 +100,6 @@ void predicted_rep_period_and_max_position(int max_start, int max_end, int input
     for(int i=max_end; max_start <= i; i--){
         sortedString[ --count[inputString[i]] ] = i;
     }
-
     
     // Initialization
     for(int i = 0; i < MAX_PERIOD; i++){
@@ -165,15 +162,21 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
     
     gettimeofday(&e, NULL);
     time_predicted_rep_period_and_max_position
-    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+        += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
 
     // Traverse the De Bruijn graph of all k-mers in a greedy manner
     gettimeofday(&s, NULL);
+    
     int actual_rep_period =
     search_De_Bruijn_graph(max_start, max_end, max_pos, inputLen, pow4[k-1] );
+    
     gettimeofday(&e, NULL);
     time_search_De_Bruijn_graph
-    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+        += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
+    if(actual_rep_period < MIN_PERIOD){
+        return;
+    }
     
     int ConsensusMethod;
     //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
@@ -189,7 +192,6 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         gettimeofday(&e, NULL);
         time_progressive_multiple_alignment
         += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-        
     }
     
     //---------------------------------------------------------------------------
@@ -568,9 +570,7 @@ int search_repeat_end(int inputLen, int w, int k, int search_pos, int end_pos){
             }else{
                 return(end_pos);
             }
-
         }
-        
         //-------------------------------------------------------------------
         // Incremental updates of s, q, and ip
         
@@ -631,15 +631,11 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int e
     return(found);
 }
 
-
-
 void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int print_multiple_TR, int use_big_window){
     
     if( end_pos < search_pos + MIN_PERIOD * MIN_NUM_FREQ_UNIT ){
         return;
     }
-    
-    
     struct timeval s_time, e_time;
 
 #ifdef DEBUG_window_kmer
@@ -647,7 +643,6 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
 #endif
     
     int max_w, max_k, max_start, max_end;
-    
     // Locate the non-overlapping regions of tandem repeats
     if(search_pos < end_pos){
         int found = 0;

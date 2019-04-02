@@ -8,16 +8,23 @@
 
 // Key parameters
 
-#define MAX_INPUT_LENGTH 1000000  // The maximum length of each read
+#define MAX_INPUT_LENGTH 1000000 // The maximum length of each read
 #define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
+#define MIN_PERIOD 2            // Minimum period length
+#define MAX_PERIOD 500          // Maximum period length
+
+
+// Window size parameters for locating the boundaries of tandem repeats
+#define MIN_WINDOW 20
+#define MAX_WINDOW 5000
+#define MIN_BIG_WINDOW 1000
+#define MAX_BIG_WINDOW 5000
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
 #define maxKmer1 9
 #define maxKmer2 11              // Increase this when no qualified repeats are found.
 #define BLK 1024                // Block size of input buffer.
-#define MAX_PERIOD 500          // Maximum period length
-#define MIN_PERIOD 2            // Minimum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
 
@@ -25,11 +32,6 @@
 #define MIN_MAX_DI 0.5
 #define MIN_PearsonCC   0.7
 
-// Window size parameters for locating the boundaries of tandem repeats
-#define MIN_WINDOW 20
-#define MAX_WINDOW 5000
-#define MIN_BIG_WINDOW 1000
-#define MAX_BIG_WINDOW 5000
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
