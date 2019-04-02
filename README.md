@@ -5,8 +5,13 @@ usage:   mTR [-smb] <fasta file>
 
 -s: Find a single tandem repeat in each read. 
 -m: Find multiple different tandem repeats.
--b: Use this option if longer blocks of tandem repeats are preferable
+-b: This option works much facter by avoiding most of short blockes to putput longer blocks (>= 1Kb in length) of tandem repeats.
 
+Command examples:
+mTR -s      A single tandem repeat
+mTR -sb    A single tandem repeat of >1Kb in size
+mTR -m     Multiple tandem repeats
+mTR -mb   Multiple tandem repeats of > 1Kb in size
 
 /*-----------------------------------------
 Features associated with one read with repeats

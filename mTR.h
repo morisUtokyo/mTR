@@ -20,13 +20,16 @@
 #define MIN_PERIOD 2            // Minimum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
-#define MIN_MAX_DI 0.4          // For filtering out reads with no meaningful tandem repeats
+
+// Heuristic parameter values for filtering out reads with less meaningful tandem repeats
+#define MIN_MAX_DI 0.5
+#define MIN_PearsonCC   0.7
 
 // Window size parameters for locating the boundaries of tandem repeats
 #define MIN_WINDOW 20
 #define MAX_WINDOW 5000
-#define MIN_BIG_WINDOW 5000
-#define MAX_BIG_WINDOW 50000
+#define MIN_BIG_WINDOW 1000
+#define MAX_BIG_WINDOW 5000
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1

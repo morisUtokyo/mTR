@@ -382,8 +382,6 @@ void fill_directional_index(int inputLen, int w, int k){
         vector2[i] = 0;
     }
     // At the initial step, assume that vector0, the window ending at (i-1), is the empty vector filled with zero
-    //for(int i=0; i < w && i < (inputLen - w - k + 1); i++){
-    //for(int i = search_pos; i < search_pos + w && i < (end_pos - w - k + 1); i++){
     for(int i=0; i<w; i++){
         vector0[ inputString[i] ]++;
         vector1[ inputString[i + w] ]++;
@@ -404,7 +402,6 @@ void fill_directional_index(int inputLen, int w, int k){
         ip_12  += vector1[i] * vector2[i];
     }
     // Shift vector0/1/2 starting from i=1 can calculate directional indexes
-    //for(int i=0; i < (inputLen - w - k + 1); i++){
     for(int i=0; i < (inputLen*3 - w*3 - k + 1); i++){
         if(s_0 == s_1 && s_1 == s_2){}
         else{
@@ -521,76 +518,142 @@ void fill_directional_index(int inputLen, int w, int k){
 }
 
 
+int search_repeat_end(int inputLen, int w, int k, int search_pos, int end_pos){
+    
+    // initialize vectors
+    for(int i=0; i < 4 * BLK; i++){
+        // We set the three vectors to the vectors with 1s in place of the zero vector.
+        vector0[i] = 0; // the vector starting from position search_pos
+        vector1[i] = 0; // a moving window
+    }
+    // At the initial step
+    for(int i=0; i<w; i++){
+        vector0[ inputString[search_pos + i] ]++;
+        vector1[ inputString[search_pos + i + w] ]++;
+    }
+    // See the definition of Pearson's CC in https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
+    // Compute the initial values for s(sum), q(squared sum), and ip(inner product)
+    double s_0, s_1, q_0, q_1, ip_01;
+    s_0 = 0; s_1 = 0; q_0 = 0; q_1 = 0; ip_01 = 0;
+    for(int i=0; i<pow4[k]; i++){
+        s_0    += vector0[i];
+        s_1    += vector1[i];
+        q_0    += vector0[i] * vector0[i];
+        q_1    += vector1[i] * vector1[i];
+        ip_01  += vector0[i] * vector1[i];
+    }
+    // Shift vector1
+    for(int i=search_pos; i < (inputLen*3 - w*3 - k + 1); i++){
+        if(s_0 == s_1){}
+        else{
+            fprintf(stderr, "inconsistency in search_end_pos\n");
+            exit(EXIT_FAILURE);
+            
+        }
+        // Compute the directional index at i
+        double sd_0    = sqrt(q_0 * pow4[k] - s_0 * s_0);
+        double sd_1    = sqrt(q_1 * pow4[k] - s_1 * s_1);
+        double P_01;
+        if(sd_0*sd_1 > 0){
+            P_01 = (ip_01 * pow4[k] - s_0 * s_1)/(sd_0 * sd_1);
+        }else{  // When one of the two SDs is zero.
+            P_01 = 0;
+        }
+        
+        // Exit if the Pearson's CC gets smaller than MIN_PearsonCC.
+        if(P_01 < MIN_PearsonCC){
+            //exit(EXIT_FAILURE);
+            if(i + w*2 < end_pos){
+                return(i + w*2);    // vector 1 starts at ends at i + w*2
+            }else{
+                return(end_pos);
+            }
+
+        }
+        
+        //-------------------------------------------------------------------
+        // Incremental updates of s, q, and ip
+        
+        // Determine positions to be updated
+        // dec_i_v1 means the position in vector 1 was decremented.
+        int dec_i_v1, inc_i_v1;
+        dec_i_v1 = inputString[i + w];
+        inc_i_v1 = inputString[i + w*2];
+
+        // if dec_i_v1 == inc_i_v1, vectors 0 and 1 remain the same.
+        // Otherwise, update vector 1
+        if( dec_i_v1 != inc_i_v1 ){
+            // Subtract changes before updates
+            q_1   -= pow(vector1[ dec_i_v1 ], 2);
+            q_1   -= pow(vector1[ inc_i_v1 ], 2);
+            ip_01 -= vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
+            ip_01 -= vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
+            
+            // Update vectors and save the previous values before decrement/increment vectors
+            vector1[ dec_i_v1 ]--;  s_1--;
+            vector1[ inc_i_v1 ]++;  s_1++;
+            
+            // Add changes after updates
+            q_1   += pow(vector1[ dec_i_v1 ], 2);
+            q_1   += pow(vector1[ inc_i_v1 ], 2);
+            ip_01 += vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
+            ip_01 += vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
+        }
+    }
+    return(-1);
+}
+
+
 int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int end_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR, int use_big_window){
     
     fill_directional_index(inputLen, w, k);
-    /*
-    fprintf(stderr, "w=%i\n", w);
-    for(int i=inputLen; i<inputLen*2; i++){
-        fprintf(stdout, "%i,%f\n", i-inputLen, directional_index[i]);
-    }
-    exit(EXIT_FAILURE);
-     */
-    
 
     // Search for a position with the maximum value
     int max_pos = search_pos;
     double max_DI = 0;
-    for(int i=search_pos; i < end_pos - w; i++){
+    for(int i=search_pos; i + w < end_pos; i++){ // We need to require i + w < end_pos
         if( max_DI < directional_index[i] ){
             max_pos = i;
             max_DI  = directional_index[max_pos];
         }
     }
-    
-    // Search for a position with the minimum value after max_pos
-    int min_pos = max_pos;
-    double min_DI = (-1)*MIN_MAX_DI; // min_DI < (-1)*MIN_MAX_DI
     int found = 0;
-    for(int i=max_pos; i < end_pos - w; i++){
-        if( directional_index[i] < min_DI ){
-            min_pos = i;
-            min_DI  = directional_index[min_pos];
-        }
-        // This rule is an ad hoc rule for detecting multiple BIG TRs and may need revision.
-        if(   print_multiple_TR == 1
-           && use_big_window == 1
-           && max_pos + w < min_pos
-        ){
+    if(MIN_MAX_DI < max_DI){
+        // Make sure that all the positions in the range starting with max_pos have sufficiently high PearsonCC
+        int repeat_end = search_repeat_end(inputLen, w, k, max_pos, end_pos);
+        if( -1 < repeat_end){
             found = 1;
-            break;
+            *max_start = max_pos;
+            *max_end   = repeat_end;
+            *max_DI_answer = max_DI;
         }
-    }
-    
-    if(max_pos + w * 3 < min_pos){      // Using width of w*3 is somewhat ad hoc but works.
-        if(print_multiple_TR == 1 ||
-           MIN_MAX_DI < max_DI          // Prune uninformative ranges when we look for a single TR.
-        ){
-            found = 1;
-        }
-    }
-    
-    if(found == 1){
-        *max_start = max_pos;
-        *max_end   = min_pos + w;
-        *max_DI_answer = max_DI;
     }
     return(found);
 }
 
 
 
-
 void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int print_multiple_TR, int use_big_window){
+    
+    if( end_pos < search_pos + MIN_PERIOD * MIN_NUM_FREQ_UNIT ){
+        return;
+    }
+    
+    
     struct timeval s_time, e_time;
+
+#ifdef DEBUG_window_kmer
+    fprintf(stderr, "search\t\t%i\t%i\n", search_pos, end_pos);
+#endif
     
     int max_w, max_k, max_start, max_end;
     
     // Locate the non-overlapping regions of tandem repeats
     if(search_pos < end_pos){
         int found = 0;
-        double tmp_DI = 0;
-        double max_DI = 0;
+        double tmp_measure = 0;
+        double max_measure = 0;
+        double tmp_DI, max_DI;
         int tmp_start, tmp_end;
         
         // Search for an optimal range with a candidate tandem repeat
@@ -604,15 +667,19 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
             find_best_candidate_region(
                 inputLen, w, k, search_pos + inputLen, end_pos + inputLen,
                 &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR, use_big_window);
-            // As random sequences of length inputLen are added, move the positions by inputLen.
-            
-            if(found_one == 1 && max_DI < tmp_DI) {
-                max_DI    = tmp_DI;
-                max_w = w;
-                max_k = k;
-                max_start = tmp_start;
-                max_end   = tmp_end;
-                found = 1;
+            // As random sequences of length inputLen are added before and after the input string, move the positions by inputLen.
+            if(found_one == 1) {
+                // select a longer range staring with the maximum DI
+                tmp_measure = tmp_end - tmp_start; // Or you can use tmp_DI as the measure
+                if( max_measure < tmp_measure ){
+                    max_measure = tmp_measure;
+                    max_DI = tmp_DI;
+                    max_w = w;
+                    max_k = k;
+                    max_start = tmp_start;
+                    max_end   = tmp_end;
+                    found = 1;
+                }
             }
             // Sizes of windows
             if(w <= 50){
@@ -620,25 +687,27 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
             }else if(w < 100){
                 w += 20;
             }else if(w < 1000){
-                w += 100;
+                w += 200;
             }else if(w < 10000){
-                w += 1000;
+                w += 2000;
             }else{
-                w += 10000;
+                w += 20000;
             }
         }
-        
-        // Reset the positions and determine the "optimal" tandem repeat in the range
-        int query_start = max_start - inputLen;
-        int query_end   = max_end   - inputLen;
-        
-        
         gettimeofday(&e_time, NULL);
         time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
         
         if(found){
             gettimeofday(&s_time, NULL);
             
+            // Reset the positions and determine the "optimal" tandem repeat in the range
+            int query_start = max_start - inputLen;
+            int query_end   = max_end   - inputLen;
+            
+#ifdef DEBUG_window_kmer
+            fprintf(stderr, "Divide w=%i\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
+#endif
+
             int predicted_rep_period, max_pos;
             init_inputString(max_k, inputLen);  // Regenerate the inputString from the original input
             predicted_rep_period_and_max_position( query_start, query_end, inputLen, &predicted_rep_period, &max_pos, 4);
@@ -649,27 +718,46 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
             time_period
             += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
             
+            
+            int qualified_repeat = 0;
+            if(   RRs[0].repeat_len > 0
+               && RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end
+               ){
+                qualified_repeat = 1;
+            }
+            
             repeat_in_read tmp_rr;
-            if(RRs[0].repeat_len > 0){
+            if(qualified_repeat){
                 tmp_rr = RRs[0];
-                int repeat_start   = tmp_rr.rep_start;
-                int repeat_end     = tmp_rr.rep_end;
-                
-                // Perform recursively
-                if(print_multiple_TR == 1){
-                    handle_one_TR(readID, inputLen, search_pos, repeat_start,  print_multiple_TR, use_big_window);
+                query_start   = tmp_rr.rep_start;
+                query_end     = tmp_rr.rep_end;
+#ifdef DEBUG_window_kmer
+                fprintf(stderr, "Re-div w=%i\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
+#endif
+            }
+            
+            // Perform recursively
+            if(print_multiple_TR == 1){
+                handle_one_TR(readID, inputLen, search_pos, query_start,  print_multiple_TR, use_big_window);
+                if(qualified_repeat){
 #ifdef DEBUG_window_kmer
                     fprintf(stderr, "w=%i\t\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
 #endif
                     print_one_repeat_in_read(tmp_rr);
-                    handle_one_TR(readID, inputLen, repeat_end, end_pos,    print_multiple_TR, use_big_window);
-                }else{
+                }
+                handle_one_TR(readID, inputLen, query_end, end_pos,    print_multiple_TR, use_big_window);
+            }else{
+                if(qualified_repeat){
 #ifdef DEBUG_window_kmer
                     fprintf(stderr, "w=%i\t\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
 #endif
                     print_one_repeat_in_read(tmp_rr);
                 }
             }
+        }else{
+#ifdef DEBUG_window_kmer
+            fprintf(stderr, "Not found\n");
+#endif
         }
     }
 
