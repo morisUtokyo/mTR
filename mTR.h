@@ -6,24 +6,22 @@
 //
 //
 
-// Key parameters
-
+// Key default parameters
 #define MAX_INPUT_LENGTH 1000000 // The maximum length of each read
 #define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
 #define MIN_PERIOD 2            // Minimum period length
 #define MAX_PERIOD 500          // Maximum period length
 
-
 // Window size parameters for locating the boundaries of tandem repeats
 #define MIN_WINDOW 20
 #define MAX_WINDOW 5000
-#define MIN_BIG_WINDOW 1000
-#define MAX_BIG_WINDOW 5000
+#define MIN_BIG_WINDOW 5000
+#define MAX_BIG_WINDOW 50000
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
 #define maxKmer1 9
-#define maxKmer2 11              // Increase this when no qualified repeats are found.
+#define maxKmer2 11    // Increase this when no qualified repeats are found.
 #define BLK 1024                // Block size of input buffer.
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
@@ -31,7 +29,6 @@
 // Heuristic parameter values for filtering out reads with less meaningful tandem repeats
 #define MIN_MAX_DI 0.5
 #define MIN_PearsonCC   0.7
-
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN  1
@@ -106,15 +103,16 @@ void wrap_around_DP(
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
 
-// For debugging with #ifdef
+float time_all, time_memory, time_range, time_period, time_predicted_rep_period_and_max_position, time_wrap_around_DP, time_search_De_Bruijn_graph, time_progressive_multiple_alignment, time_count_table;
 
+// For debugging with #ifdef
+#define LOCAL_ALIGNMENT
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
 //#define DEBUG_incremental
-//#define DEBUG_window_kmer
 //#define PRINT_COMP_TIME
-#define LOCAL_ALIGNMENT
+//#define DEBUG_window_kmer
 
-float time_all, time_memory, time_range, time_period, time_predicted_rep_period_and_max_position, time_wrap_around_DP, time_search_De_Bruijn_graph, time_progressive_multiple_alignment, time_count_table;
+
 

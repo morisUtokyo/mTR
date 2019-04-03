@@ -341,26 +341,26 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
     return(DI);
 }
 
-void init_inputString_surrounded_by_random_seq(int k, int inputLen){
+void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_string_length){
     init_genrand(0);
     
     for(int i=0; i<MAX_INPUT_LENGTH; i++){
         inputString[i] = (int)(genrand_int32()%4);
     }
+    for(int i = 0; i < random_string_length; i++){
+        inputString[i] = (int)(genrand_int32()%4);
+    }
     for(int i = 0; i < inputLen; i++){
-        inputString[i] = (int)(genrand_int32()%4);
+        inputString[i + random_string_length] = orgInputString[i];
     }
-    for(int i = inputLen; i < inputLen*2; i++){
-        inputString[i] = orgInputString[i - inputLen];
-    }
-    for(int i = inputLen*2; i < inputLen*3; i++){
-        inputString[i] = (int)(genrand_int32()%4);
+    for(int i = 0; i < random_string_length; i++){
+        inputString[i + random_string_length + inputLen] = (int)(genrand_int32()%4);
     }
     int tmp = 0;
     for(int i=0; i<(k-1); i++){
         tmp = 4 * tmp + inputString[i];  // compute 4 decimal of first k-1 letters
     }
-    for(int i=0; i<(inputLen*3 - k+1); i++){
+    for(int i=0; i<(inputLen + random_string_length*2 - k+1); i++){
         inputString[i] = 4 * tmp + inputString[i+k-1];
         tmp = inputString[i] % pow4[k-1]; //　remainder, compute 4 decimal of length k-1
         if(tmp < 0){
@@ -370,7 +370,7 @@ void init_inputString_surrounded_by_random_seq(int k, int inputLen){
     }
 }
 
-void fill_directional_index(int inputLen, int w, int k){
+void fill_directional_index(int DI_array_length, int w, int k){
     
     // initialize directional _index
     for(int i=0; i<MAX_INPUT_LENGTH; i++){
@@ -404,7 +404,7 @@ void fill_directional_index(int inputLen, int w, int k){
         ip_12  += vector1[i] * vector2[i];
     }
     // Shift vector0/1/2 starting from i=1 can calculate directional indexes
-    for(int i=0; i < (inputLen*3 - w*3 - k + 1); i++){
+    for(int i=0; i < (DI_array_length - w*3 - k + 1); i++){
         if(s_0 == s_1 && s_1 == s_2){}
         else{
             fprintf(stderr, "inconsistency in fill_directional_index\n");
@@ -520,7 +520,7 @@ void fill_directional_index(int inputLen, int w, int k){
 }
 
 
-int search_repeat_end(int inputLen, int w, int k, int search_pos, int end_pos){
+int search_repeat_end(int DI_array_length, int w, int k, int search_pos, int end_pos){
     
     // initialize vectors
     for(int i=0; i < 4 * BLK; i++){
@@ -545,7 +545,7 @@ int search_repeat_end(int inputLen, int w, int k, int search_pos, int end_pos){
         ip_01  += vector0[i] * vector1[i];
     }
     // Shift vector1
-    for(int i=search_pos; i < (inputLen*3 - w*3 - k + 1); i++){
+    for(int i=search_pos; i < (DI_array_length - w*3 - k + 1); i++){
         if(s_0 == s_1){}
         else{
             fprintf(stderr, "inconsistency in search_end_pos\n");
@@ -605,8 +605,24 @@ int search_repeat_end(int inputLen, int w, int k, int search_pos, int end_pos){
 
 
 int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int end_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR, int use_big_window){
+  
+    int random_string_length;
+    if(inputLen < w * 5){
+        random_string_length = inputLen;
+    }else{
+        random_string_length = w * 5;
+    }
     
-    fill_directional_index(inputLen, w, k);
+    // Put random sequences of the input length before and after the input string
+    init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
+
+    // Shift positions by the length of random sequences
+    search_pos += random_string_length;
+    end_pos += random_string_length;
+    
+    
+    int DI_array_length = inputLen + random_string_length*2;
+    fill_directional_index( DI_array_length, w, k);
 
     // Search for a position with the maximum value
     int max_pos = search_pos;
@@ -620,11 +636,12 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int e
     int found = 0;
     if(MIN_MAX_DI < max_DI){
         // Make sure that all the positions in the range starting with max_pos have sufficiently high PearsonCC
-        int repeat_end = search_repeat_end(inputLen, w, k, max_pos, end_pos);
+        int repeat_end = search_repeat_end(DI_array_length, w, k, max_pos, end_pos);
         if( -1 < repeat_end){
             found = 1;
-            *max_start = max_pos;
-            *max_end   = repeat_end;
+            // Restore the original coordinates
+            *max_start = max_pos - random_string_length;
+            *max_end   = repeat_end -random_string_length;
             *max_DI_answer = max_DI;
         }
     }
@@ -654,15 +671,12 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
         // Search for an optimal range with a candidate tandem repeat
         gettimeofday(&s_time, NULL);
         int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
-        init_inputString_surrounded_by_random_seq(k, inputLen);
-                // Put random sequences of the input length before and after the input string
         
-        for(int w = min_window_size; w < max_window_size; ){
+        for(int w = min_window_size; w < max_window_size && w < inputLen/2; ){
             int found_one =
             find_best_candidate_region(
-                inputLen, w, k, search_pos + inputLen, end_pos + inputLen,
+                inputLen, w, k, search_pos, end_pos,
                 &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR, use_big_window);
-            // As random sequences of length inputLen are added before and after the input string, move the positions by inputLen.
             if(found_one == 1) {
                 // select a longer range staring with the maximum DI
                 tmp_measure = tmp_end - tmp_start; // Or you can use tmp_DI as the measure
@@ -677,12 +691,13 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
                 }
             }
             // Sizes of windows
-            if(w <= 50){
-                w += 10;
-            }else if(w < 100){
+            //if(w <= 50){
+            //    w += 10;
+            //}else
+            if(w < 100){
                 w += 20;
             }else if(w < 1000){
-                w += 200;
+                w += 300;
             }else if(w < 10000){
                 w += 2000;
             }else{
@@ -695,9 +710,8 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
         if(found){
             gettimeofday(&s_time, NULL);
             
-            // Reset the positions and determine the "optimal" tandem repeat in the range
-            int query_start = max_start - inputLen;
-            int query_end   = max_end   - inputLen;
+            int query_start = max_start;
+            int query_end   = max_end;
             
 #ifdef DEBUG_window_kmer
             fprintf(stderr, "Divide w=%i\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
@@ -711,13 +725,13 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
             
             gettimeofday(&e_time, NULL);
             time_period
-            += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
+                += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
             
             
             int qualified_repeat = 0;
             if(   RRs[0].repeat_len > 0
                && RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end
-               ){
+            ){
                 qualified_repeat = 1;
             }
             
