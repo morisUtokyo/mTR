@@ -15,8 +15,8 @@
 // Window size parameters for locating the boundaries of tandem repeats
 #define MIN_WINDOW 20
 #define MAX_WINDOW 5000
-#define MIN_BIG_WINDOW 5000
-#define MAX_BIG_WINDOW 50000
+#define MIN_BIG_WINDOW 1000
+#define MAX_BIG_WINDOW 10000
 
 // The following values are optimzed for a benchmark dataset.
 #define minKmer 5
@@ -111,8 +111,9 @@ float time_all, time_memory, time_range, time_period, time_predicted_rep_period_
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
 //#define DEBUG_incremental
-//#define PRINT_COMP_TIME
-//#define DEBUG_window_kmer
 
+//#define DUMP_DI
+//#define DEBUG_window_kmer
+//#define PRINT_COMP_TIME
 
 

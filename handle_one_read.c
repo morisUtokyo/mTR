@@ -96,7 +96,8 @@ void predicted_rep_period_and_max_position(int max_start, int max_end, int input
     time_count_table
     += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
-    for(int i=0; i<MAX_INPUT_LENGTH; i++){ sortedString[i] = 0; } // Initialization
+    for(int i=0; i<inputLen; i++){ sortedString[i] = 0; } // Initialization
+    //for(int i=0; i<MAX_INPUT_LENGTH; i++){ sortedString[i] = 0; } // Initialization
     for(int i=max_end; max_start <= i; i--){
         sortedString[ --count[inputString[i]] ] = i;
     }
@@ -105,9 +106,8 @@ void predicted_rep_period_and_max_position(int max_start, int max_end, int input
     for(int i = 0; i < MAX_PERIOD; i++){
         count_period_all[i] = 0;
     }
-    for(int j=0; j<MAX_INPUT_LENGTH; j++){
-        freq_interval_len[j] = 0;
-    }
+    for(int j=0; j<inputLen; j++){ freq_interval_len[j] = 0; }
+    //for(int j=0; j<MAX_INPUT_LENGTH; j++){ freq_interval_len[j] = 0; }
     for(int i=max_start; i <= max_end; i++){
         int local_start = count[inputString[i]];
         int local_end;
@@ -242,9 +242,8 @@ void init_inputString(int k, int inputLen){
     
     init_genrand(0);
     
-    for(int i=0; i<MAX_INPUT_LENGTH; i++){
-        inputString[i] = (int)(genrand_int32()%4);
-    }
+    for(int i=0; i<inputLen; i++){ inputString[i] = (int)(genrand_int32()%4); }
+    //for(int i=0; i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4); }
     
     for(int i=0; i<inputLen; i++){
         inputString[i] = orgInputString[i];
@@ -344,9 +343,9 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
 void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_string_length){
     init_genrand(0);
     
-    for(int i=0; i<MAX_INPUT_LENGTH; i++){
-        inputString[i] = (int)(genrand_int32()%4);
-    }
+    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4);}
+    //for(int i=0; i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4);}
+    
     for(int i = 0; i < random_string_length; i++){
         inputString[i] = (int)(genrand_int32()%4);
     }
@@ -370,12 +369,13 @@ void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_s
     }
 }
 
-void fill_directional_index(int DI_array_length, int w, int k){
+void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int random_string_length){
+    // We use inputLen and random_string_length for analyzing patterns of DI and Pearson's CC only.
     
     // initialize directional _index
-    for(int i=0; i<MAX_INPUT_LENGTH; i++){
-        directional_index[i] = 0;
-    }
+    for(int i=0; i<DI_array_length; i++){directional_index[i] = 0;}
+    //for(int i=0; i<MAX_INPUT_LENGTH; i++){directional_index[i] = 0;}
+
     // initialize vectors
     for(int i=0; i < 4 * BLK; i++){
         // We set the three vectors to the vectors with 1s in place of the zero vector.
@@ -428,6 +428,14 @@ void fill_directional_index(int DI_array_length, int w, int k){
         }
         double DI =  P_12 - P_01;
         directional_index[i+w] = DI;    // Note that DI is computed for position i+w (NOT i !!)
+        
+#ifdef DUMP_DI
+        int real_pos = i+w-random_string_length;
+        if( 0 <= real_pos && real_pos < inputLen){
+            //fprintf(stdout, "%i,%f\n", real_pos, P_12);
+            fprintf(stdout, "%i,%f\n", real_pos, DI);
+        }
+#endif
 
         //-------------------------------------------------------------------
         // Incremental updates of s, q, and ip
@@ -620,9 +628,8 @@ int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int e
     search_pos += random_string_length;
     end_pos += random_string_length;
     
-    
     int DI_array_length = inputLen + random_string_length*2;
-    fill_directional_index( DI_array_length, w, k);
+    fill_directional_index( DI_array_length, w, k, inputLen, random_string_length);
 
     // Search for a position with the maximum value
     int max_pos = search_pos;
