@@ -12,9 +12,10 @@
 #include "mTR.h"
 
 void print_error_message(){
-    fprintf(stderr, "Arguments must be of the form -m|-r <file name> \n");
-    fprintf(stderr, "-m: Output multiple occurrences of different tandem repeats. \n");
-    fprintf(stderr, "-r: Output a single tandem repeat. \n");
+    fprintf(stderr, "Arguments must be of the form -m|-s|-mb|-sb <file name> \n");
+    fprintf(stderr, "-m: Output multiple tandem repeats. \n");
+    fprintf(stderr, "-s: Output a single tandem repeat. \n");
+    fprintf(stderr, "-mb|-sb: Output long tandem repeats of >1 k nt in size. \n");
 }
 
 int main(int argc, char *argv[])
