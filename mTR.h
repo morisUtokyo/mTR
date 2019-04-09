@@ -112,7 +112,8 @@ float time_all, time_memory, time_range, time_period, time_predicted_rep_period_
 //#define DEBUG_progressive_multiple_alignment
 //#define DEBUG_incremental
 
-//#define DUMP_DI
+//#define DUMP_DI_PCC
+
 //#define DEBUG_window_kmer
 //#define PRINT_COMP_TIME
 

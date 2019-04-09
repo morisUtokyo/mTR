@@ -345,6 +345,7 @@ void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_s
     
     for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4);}
     //for(int i=0; i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4);}
+    // Initializing the whole range of inputString should be avoided to accelerate the performance.
     
     for(int i = 0; i < random_string_length; i++){
         inputString[i] = (int)(genrand_int32()%4);
@@ -429,11 +430,11 @@ void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int
         double DI =  P_12 - P_01;
         directional_index[i+w] = DI;    // Note that DI is computed for position i+w (NOT i !!)
         
-#ifdef DUMP_DI
+#ifdef DUMP_DI_PCC
         int real_pos = i+w-random_string_length;
         if( 0 <= real_pos && real_pos < inputLen){
-            //fprintf(stdout, "%i,%f\n", real_pos, P_12);
-            fprintf(stdout, "%i,%f\n", real_pos, DI);
+            fprintf(stdout, "%i,%f\n", real_pos, P_12);     // Pearson's correlation coefficients
+            //fprintf(stdout, "%i,%f\n", real_pos, DI);   // Directional index
         }
 #endif
 
@@ -698,9 +699,6 @@ void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int 
                 }
             }
             // Sizes of windows
-            //if(w <= 50){
-            //    w += 10;
-            //}else
             if(w < 100){
                 w += 20;
             }else if(w < 1000){
