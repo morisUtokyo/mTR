@@ -12,10 +12,9 @@
 #include "mTR.h"
 
 void print_error_message(){
-    fprintf(stderr, "Arguments must be of the form -m|-s|-mb|-sb <file name> \n");
-    fprintf(stderr, "-m: Output multiple tandem repeats. \n");
-    fprintf(stderr, "-s: Output a single tandem repeat. \n");
-    fprintf(stderr, "-mb|-sb: Output long tandem repeats of >1 k nt in size. \n");
+    fprintf(stderr, "Arguments must be of the form (-m|-s) <file name> \n");
+    fprintf(stderr, "-m: Output multiple tandem repeats (default setting). \n");
+    fprintf(stderr, "-s: Output the longest tandem repeat. \n");
 }
 
 int main(int argc, char *argv[])
@@ -25,26 +24,21 @@ int main(int argc, char *argv[])
 
     
     char *inputFile;
-    int print_multiple_TR = 0;
-    int use_big_window = 0;
+    int print_multiple_TR = 1;
 
-    if(argc == 3){
+    if(argc == 2){
+        print_multiple_TR = 1;
+    }else if(argc == 3){
         char *p;
         p=argv[1];
         if(*p == '-' ){
             for(p++; *p != '\0'; p++){
                 switch(*p){
-                    case 'm':   print_multiple_TR = 1; break;
-                    case 'b':   use_big_window = 1; break;
+                    case 's':   print_multiple_TR = 0; break;
                 }
             }
-            if(use_big_window == 1){
-                min_window_size = MIN_BIG_WINDOW;
-                max_window_size = MAX_BIG_WINDOW;
-            }else{
-                min_window_size = MIN_WINDOW;
-                max_window_size = MAX_WINDOW;
-            }
+            min_window_size = MIN_WINDOW;
+            max_window_size = MAX_WINDOW;
         }
     }else{
         print_error_message();
@@ -59,7 +53,7 @@ int main(int argc, char *argv[])
     
     inputFile = argv[2];
     fprintf(stderr, "The input file name is %s.\n", inputFile);
-    int read_cnt = handle_one_file(inputFile, print_multiple_TR, use_big_window);
+    int read_cnt = handle_one_file(inputFile, print_multiple_TR);
     fprintf(stderr, "Number of reads is %i.\n", read_cnt);
     
     gettimeofday(&e, NULL);
@@ -74,10 +68,8 @@ int main(int argc, char *argv[])
     fprintf(stderr, "%f\tranges\n",         time_range);
     
     fprintf(stderr, "%f\tComputing periods\n", time_period);
-    fprintf(stderr, "\t%f\tpreparation\n",    time_predicted_rep_period_and_max_position);
     fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
     fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
-    fprintf(stderr, "\t%f\tprogressive\n",   time_progressive_multiple_alignment);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
 #endif
 

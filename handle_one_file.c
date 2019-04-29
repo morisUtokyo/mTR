@@ -17,10 +17,14 @@ void free_global_variables_and_exit(){
     if(pow4              != NULL){ free(pow4); }
     if(orgInputString    != NULL){ free(orgInputString); }
     if(inputString       != NULL){ free(inputString); }
+    if(inputString_w_rand!= NULL){ free(inputString_w_rand); }
     if(count             != NULL){ free(count); }
     if(sortedString      != NULL){ free(sortedString); }
     if(RRs               != NULL){ free(RRs);}
+    if(directional_index_tmp != NULL){ free(directional_index_tmp); }
     if(directional_index != NULL){ free(directional_index); }
+    if(directional_index_end != NULL){ free(directional_index_end); }
+    if(directional_index_w != NULL){ free(directional_index_w); }
     if(vector0           != NULL){ free(vector0); }
     if(vector1           != NULL){ free(vector1); }
     if(vector2           != NULL){ free(vector2); }
@@ -43,10 +47,10 @@ void free_global_variables_and_exit(){
 void malloc_global_variables(){
     
     // Allocate the main memory for global variables in the heap
-    pow4  = (int *)malloc(sizeof(int) * (maxKmer2+1));
+    pow4  = (int *)malloc(sizeof(int) * (maxKmer+1));
     if( pow4 == NULL ){ free_global_variables_and_exit(); }
     pow4[0] = 1;
-    for(int i=1; i<= maxKmer2; i++){
+    for(int i=1; i<= maxKmer; i++){
         pow4[i] = pow4[i-1] * 4;
     }
     
@@ -56,7 +60,10 @@ void malloc_global_variables(){
     inputString     = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( inputString == NULL ){ free_global_variables_and_exit(); }
     
-    count           = (int *)malloc( sizeof(int) * pow4[maxKmer2]);
+    inputString_w_rand = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
+    if( inputString_w_rand == NULL ){ free_global_variables_and_exit(); }
+    
+    count           = (int *)malloc( sizeof(int) * pow4[maxKmer]);
     if( count == NULL ){ free_global_variables_and_exit(); }
     
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
@@ -65,8 +72,17 @@ void malloc_global_variables(){
     RRs = (repeat_in_read*) malloc(2*sizeof(repeat_in_read));
     if( RRs == NULL ){ free_global_variables_and_exit(); }
     
+    directional_index_tmp = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    if( directional_index_tmp == NULL ){ free_global_variables_and_exit(); }
+    
     directional_index = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
     if( directional_index == NULL ){ free_global_variables_and_exit(); }
+    
+    directional_index_end = (int *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    if( directional_index_end == NULL ){ free_global_variables_and_exit(); }
+    
+    directional_index_w = (int *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    if( directional_index_w == NULL ){ free_global_variables_and_exit(); }
     
     vector0 = (int *)malloc(sizeof(int) * 4 * BLK);
     if( vector0 == NULL ){ free_global_variables_and_exit(); }
@@ -108,10 +124,14 @@ void free_global_variables(){
     free(pow4);
     free(orgInputString);
     free(inputString);
+    free(inputString_w_rand);
     free(count);
     free(sortedString);
     free(RRs);
+    free(directional_index_tmp);
     free(directional_index);
+    free(directional_index_end);
+    free(directional_index_w);
     free(vector0);
     free(vector1);
     free(vector2);
@@ -126,7 +146,7 @@ void free_global_variables(){
     
 }
 
-int handle_one_file(char *inputFile, int print_multiple_TR, int use_big_window){
+int handle_one_file(char *inputFile, int print_multiple_TR){
     //---------------------------------------------------------------------------
     // Feed a string from a file, convert the string into a series of integers
     //---------------------------------------------------------------------------
@@ -162,7 +182,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR, int use_big_window){
                 firstRead = 0;
             }else{  // Process the previous read if the current read is not the first one.
                 inputLen = cnt;
-                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, use_big_window);
+                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
                 read_cnt++;
             }
             // Feed the header of the read.
@@ -195,7 +215,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR, int use_big_window){
         }
     }
     inputLen = cnt;
-    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, use_big_window);
+    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
     read_cnt++;
 
     

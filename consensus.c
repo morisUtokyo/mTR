@@ -2,30 +2,80 @@
 //  Consensus.c
 //
 
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include "mTR.h"
 
+int max_position(int query_start, int query_end, int inputLen, int k)
+{
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
+    for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}  // Initialization
+    for(int i = query_start; i <= query_end; i++){ count[ inputString[i] ]++; }    // Perform counting
+    for(int i = 1; i < pow4[k]; i++){ count[i] = count[i-1] + count[i]; }
+    
+    for(int i=0; i<inputLen; i++){ sortedString[i] = 0; } // Initialization
+    for(int i=query_end; query_start <= i; i--){
+        sortedString[ --count[inputString[i]] ] = i;
+    }
+    
+    // Initialize the minimum number of positions
+    for(int j = query_start; j <= query_end; j++){
+        freq_interval_len[j] = 0;
+    }
+    //for(int j=0; j<inputLen; j++){ freq_interval_len[j] = 0; }
+    for(int i = query_start; i <= query_end; i++){
+        int local_start = count[inputString[i]];
+        int local_end;
+        if(inputString[i] == pow4[k]-1){
+            local_end = inputLen;
+        }else{
+            local_end = count[ inputString[i]+1 ];
+        }
+        freq_interval_len[i] = (double)(local_end - local_start);
+    }
+    //　Locate the initial position (k-mer) with the maximum frequency
+    int max_pos = query_start;
+    int max_freq   = (int)freq_interval_len[max_pos];
+    for(int j=query_start; j <= query_end; j++){
+        if(max_freq < freq_interval_len[j]){
+            max_pos  = j;
+            max_freq = (int)freq_interval_len[max_pos];
+        }
+    }
+    gettimeofday(&e, NULL);
+    time_count_table
+    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
+    return max_pos;
+}
 
-int search_De_Bruijn_graph(
-    int max_start, int max_end, int max_pos, int inputLen, int pow4k_1){
 
+int search_De_Bruijn_graph( int query_start, int query_end, int inputLen, int k ){
+    
+    // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
+    
+    int start, end, tmp_count;
+    int max_pos = max_position(query_start, query_end, inputLen, k);
+    
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
+    int Node = inputString[max_pos];
+    int initialNode = Node;
+    int nextNode;
+    
     // Initialization
     for(int i = 0; i < MAX_PERIOD; i++){
         rep_unit_string[i] = 0;
     }
     int actual_rep_period = 0;
-    
-    
-    // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
-    
-    int start, end, tmp_count;
-    int Node = inputString[max_pos];
-    int initialNode = Node;
-    int nextNode;
-    
+    int pow4k_1 = pow4[k-1];
+    // de Bruijn graph search
     for(int k=0; k< MAX_PERIOD; k++){
         rep_unit_string[k] = Node / pow4k_1;
         
@@ -55,11 +105,15 @@ int search_De_Bruijn_graph(
             break;
         }
     }
+    gettimeofday(&e, NULL);
+    time_search_De_Bruijn_graph
+    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
     return(actual_rep_period);
 }
 
 int progressive_multiple_alignment(
-            int max_start, int max_end, int max_pos,
+            int query_start, int query_end, int max_pos,
             int rep_period, int Kmer, int inputLen, int pow4k){
 
     if(rep_period > MAX_PERIOD){
@@ -76,7 +130,7 @@ int progressive_multiple_alignment(
     }
     
 #ifdef DEBUG_progressive_multiple_alignment
-    printf("max_start = %i\tmax_end = %i\tmax_pos = %i\trep_period =%i\tstart=%i\tend=%i\tKmer = %i\n", max_start, max_end, max_pos, rep_period, start, end, Kmer);
+    printf("query_start = %i\tquery_end = %i\tmax_pos = %i\trep_period =%i\tstart=%i\tend=%i\tKmer = %i\n", query_start, query_end, max_pos, rep_period, start, end, Kmer);
 #endif
     
     // Initialization
@@ -102,13 +156,13 @@ int progressive_multiple_alignment(
     
     int k = start;
     // Move k into the repeat region
-    for( ; ( sortedString[k] < max_start) && (k < end); k++);
+    for( ; ( sortedString[k] < query_start) && (k < end); k++);
     
     // A progressive multiple alignment between
     // the reference starting from max_pos and
     // one string starting from sortedString[k] in oneInputString
     
-    for(; ( sortedString[k] <= max_end) && (k < end); k++){
+    for(; ( sortedString[k] <= query_end) && (k < end); k++){
         // Perform a global alignment
         // i scans the reference starting from max_pos in oneInputString.
         // j scans one string starting from sortedString[k] in oneInputString.

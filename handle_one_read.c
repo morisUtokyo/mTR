@@ -12,6 +12,7 @@
 #include <string.h>
 #include "mTR.h"
 #include "MT.h"
+#include "chaining.h"
 
 void print_4_decimals(int val, int len){
     if(len > 0){
@@ -82,103 +83,23 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->ConsensusMethod     = -1;
 }
 
-void predicted_rep_period_and_max_position(int max_start, int max_end, int inputLen,
-        int *predicted_rep_period, int *max_pos, int k)
-{
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
-    
-    for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}  // Initialization
-    for(int i = max_start; i <= max_end; i++){ count[ inputString[i] ]++; }    // Perform counting
-    for(int i = 1; i < pow4[k]; i++){ count[i] = count[i-1] + count[i]; }
-    
-    gettimeofday(&e, NULL);
-    time_count_table
-    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-    
-    for(int i=0; i<inputLen; i++){ sortedString[i] = 0; } // Initialization
-    //for(int i=0; i<MAX_INPUT_LENGTH; i++){ sortedString[i] = 0; } // Initialization
-    for(int i=max_end; max_start <= i; i--){
-        sortedString[ --count[inputString[i]] ] = i;
-    }
-    
-    // Initialization
-    for(int i = 0; i < MAX_PERIOD; i++){
-        count_period_all[i] = 0;
-    }
-    for(int j=0; j<inputLen; j++){ freq_interval_len[j] = 0; }
-    //for(int j=0; j<MAX_INPUT_LENGTH; j++){ freq_interval_len[j] = 0; }
-    for(int i=max_start; i <= max_end; i++){
-        int local_start = count[inputString[i]];
-        int local_end;
-        if(inputString[i] == pow4[k]-1){
-            local_end = inputLen;
-        }else{
-            local_end = count[ inputString[i]+1 ];
-        }
-        freq_interval_len[i] = (double)(local_end - local_start);
-        
-        for(int j = local_start; j < (local_end - 1); j++){
-            int aPeriod = abs(sortedString[j+1] - sortedString[j]);
-            if(aPeriod < MAX_PERIOD){
-                count_period_all[ aPeriod ]++;
-            }
-        }
-    }
-    //　Locate the initial position (k-mer) with the maximum frequency
-    *max_pos = max_start;
-    int max_freq   = (int)freq_interval_len[*max_pos];
-    for(int j=max_start; j <= max_end; j++){
-        if(max_freq < freq_interval_len[j]){
-            *max_pos  = j;
-            max_freq = (int)freq_interval_len[*max_pos];
-        }
-    }
-    // Compute repeat period with the maximum frequency
-    *predicted_rep_period = 2;
-    max_freq = 0;
-    for(int p = 2; p < MAX_PERIOD; p++){
-        if(max_freq < count_period_all[p]){
-            *predicted_rep_period = p;
-            max_freq = count_period_all[p];
-        }
-    }
-}
-
-void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputLen, int k, repeat_in_read *rr ){
+void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int inputLen, int k, repeat_in_read *rr ){
     
     //---------------------------------------------------------------------------
-    // In the range [max_start, max_end],
-    // compute the representative unit string by using a progressive multiple alignment or
+    // In the range [query_start, query_end],
+    // compute the representative unit string
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
     //---------------------------------------------------------------------------
 
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
-    
-    int predicted_rep_period, max_pos;
-    predicted_rep_period_and_max_position(
-        max_start, max_end, inputLen, &predicted_rep_period, &max_pos, k);
-    
-    gettimeofday(&e, NULL);
-    time_predicted_rep_period_and_max_position
-        += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-
-    // Traverse the De Bruijn graph of all k-mers in a greedy manner
-    gettimeofday(&s, NULL);
-    
-    int actual_rep_period =
-    search_De_Bruijn_graph(max_start, max_end, max_pos, inputLen, pow4[k-1] );
-    
-    gettimeofday(&e, NULL);
-    time_search_De_Bruijn_graph
-        += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    //int actual_rep_period = search_De_Bruijn_graph(query_start, query_end, k, inputLen, pow4[k-1] );
+    int actual_rep_period = search_De_Bruijn_graph(query_start, query_end, inputLen, k);
     
     if(actual_rep_period < MIN_PERIOD){
         return;
     }
     
-    int ConsensusMethod;
+    int ConsensusMethod = DeBruijnGraphSearch;
+    /*
     //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
     if(actual_rep_period > 0){
         // A De Bruijin graph search is successful.
@@ -188,17 +109,20 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         ConsensusMethod = ProgressiveMultipleAlignment;
         
         gettimeofday(&s, NULL);
-        actual_rep_period = progressive_multiple_alignment( max_start, max_end, max_pos, predicted_rep_period, k, inputLen, pow4[k] );
+        actual_rep_period = progressive_multiple_alignment( query_start, query_end, max_pos, predicted_rep_period, k, inputLen, pow4[k] );
         gettimeofday(&e, NULL);
         time_progressive_multiple_alignment
         += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     }
+    */
     
     //---------------------------------------------------------------------------
     // Compute the accuracy of the representative unit string by wrap-around DP
     //---------------------------------------------------------------------------
     
-    if(actual_rep_period * (max_end - max_start + 1) > WrapDPsize){
+    struct timeval s, e;
+    
+    if(actual_rep_period * (query_end - query_start + 1) > WrapDPsize){
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
         clear_rr(rr);
     }else if(actual_rep_period > 0){
@@ -208,8 +132,8 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         gettimeofday(&s, NULL);
         wrap_around_DP(rep_unit_string,
                        actual_rep_period,
-                       &orgInputString[max_start],
-                       (max_end - max_start + 1),
+                       &orgInputString[query_start],
+                       (query_end - query_start + 1),
                        &actual_start,       &actual_end,
                        &actual_repeat_len,  &Num_freq_unit,
                        &Num_matches,        &Num_mismatches,
@@ -219,10 +143,10 @@ void find_tandem_repeat_sub(int max_start, int max_end, char *readID, int inputL
         
         strcpy( rr->readID, readID);
         rr->inputLen           = inputLen;
-        rr->rep_start          = max_start + actual_start;
-        rr->rep_end            = max_start + actual_end;
+        rr->rep_start          = query_start + actual_start;
+        rr->rep_end            = query_start + actual_end;
         rr->repeat_len         = actual_repeat_len;
-        rr->predicted_rep_period = predicted_rep_period;
+        //rr->predicted_rep_period = predicted_rep_period;
         rr->rep_period         = actual_rep_period;
         rr->Kmer               = k;
         rr->Num_freq_unit      = 0;
@@ -262,36 +186,35 @@ void init_inputString(int k, int inputLen){
     }
 }
 
-void find_tandem_repeat(int max_start, int max_end, int predicted_rep_period, char *readID, int inputLen,  repeat_in_read *rr, repeat_in_read *tmp_rr ){
+void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int inputLen, int k, repeat_in_read *rr, repeat_in_read *tmp_rr ){
+    
+    // A heuristic rule for setting the maximum k-mer to an oprimal value
+    int min_k = minKmer;
+
+    int diff;
+    if(w < 100){
+        diff = 5;
+    }else if(w < 1000){
+        diff = 2;
+    }else{
+        diff=0;
+    }
+    int max_k = maxKmer - diff;
     
     int max_matches = -1;
     clear_rr(tmp_rr);  // clear the space for the result
-
-    int k_min, k_max;
-    k_min = MIN(predicted_rep_period, minKmer);
-    int freq_periods = (max_end - max_start)/predicted_rep_period;
-    k_max = maxKmer2;
-    if(predicted_rep_period <= 10 & freq_periods < 300){
-        k_max = maxKmer1;
-    }
-    
-    for(int k = k_min; k <= k_max; k++){
+    for(int k = min_k; k <= max_k; k++){
         clear_rr(rr);
         init_inputString(k, inputLen);
-        find_tandem_repeat_sub(max_start, max_end, readID, inputLen, k, rr);
+        find_tandem_repeat_sub(query_start, query_end, readID, inputLen, k, rr);
         
         if( max_matches < rr->Num_matches &&
-           MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
-           MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
-           MIN_PERIOD <= rr->rep_period )
+            MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
+            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
+            MIN_PERIOD <= rr->rep_period )
         {
-            // An ad hoc rule. Remove overestimated units of length < 10
-            if((predicted_rep_period <= 10 && rr->rep_period < predicted_rep_period * 2) ||
-               predicted_rep_period > 10)
-            {
-                max_matches = rr->Num_matches;
-                *tmp_rr = *rr;
-            }
+            max_matches = rr->Num_matches;
+            *tmp_rr = *rr;
         }
     }
     *rr = *tmp_rr;
@@ -343,52 +266,49 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
 void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_string_length){
     init_genrand(0);
     
-    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4);}
-    //for(int i=0; i<MAX_INPUT_LENGTH; i++){ inputString[i] = (int)(genrand_int32()%4);}
-    // Initializing the whole range of inputString should be avoided to accelerate the performance.
+    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString_w_rand[i] = (int)(genrand_int32()%4);}
     
     for(int i = 0; i < random_string_length; i++){
-        inputString[i] = (int)(genrand_int32()%4);
+        inputString_w_rand[i] = (int)(genrand_int32()%4);
     }
     for(int i = 0; i < inputLen; i++){
-        inputString[i + random_string_length] = orgInputString[i];
+        inputString_w_rand[i + random_string_length] = orgInputString[i];
     }
     for(int i = 0; i < random_string_length; i++){
-        inputString[i + random_string_length + inputLen] = (int)(genrand_int32()%4);
+        inputString_w_rand[i + random_string_length + inputLen] = (int)(genrand_int32()%4);
     }
     int tmp = 0;
     for(int i=0; i<(k-1); i++){
-        tmp = 4 * tmp + inputString[i];  // compute 4 decimal of first k-1 letters
+        tmp = 4 * tmp + inputString_w_rand[i];  // compute 4 decimal of first k-1 letters
     }
     for(int i=0; i<(inputLen + random_string_length*2 - k+1); i++){
-        inputString[i] = 4 * tmp + inputString[i+k-1];
-        tmp = inputString[i] % pow4[k-1]; //　remainder, compute 4 decimal of length k-1
+        inputString_w_rand[i] = 4 * tmp + inputString_w_rand[i+k-1];
+        tmp = inputString_w_rand[i] % pow4[k-1]; //　remainder, compute 4 decimal of length k-1
         if(tmp < 0){
-            fprintf(stderr, "fatal error at %i\t %i \t%i\n", i, inputString[i], pow4[k-1] );
+            fprintf(stderr, "fatal error at %i\t %i \t%i\n", i, inputString_w_rand[i], pow4[k-1] );
             exit(EXIT_FAILURE);
         }
     }
 }
 
-void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int random_string_length){
+void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen, int random_string_length){
     // We use inputLen and random_string_length for analyzing patterns of DI and Pearson's CC only.
     
-    // initialize directional _index
-    for(int i=0; i<DI_array_length; i++){directional_index[i] = 0;}
-    //for(int i=0; i<MAX_INPUT_LENGTH; i++){directional_index[i] = 0;}
-
+    for(int i=0; i<DI_array_length; i++){
+        directional_index_tmp[i] = -1;
+    }
+    
     // initialize vectors
     for(int i=0; i < 4 * BLK; i++){
-        // We set the three vectors to the vectors with 1s in place of the zero vector.
         vector0[i] = 0;
         vector1[i] = 0;
         vector2[i] = 0;
     }
-    // At the initial step, assume that vector0, the window ending at (i-1), is the empty vector filled with zero
+
     for(int i=0; i<w; i++){
-        vector0[ inputString[i] ]++;
-        vector1[ inputString[i + w] ]++;
-        vector2[ inputString[i + w*2] ]++;
+        vector0[ inputString_w_rand[i] ]++;
+        vector1[ inputString_w_rand[i + w] ]++;
+        vector2[ inputString_w_rand[i + w*2] ]++;
     }
     // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
     // Compute the initial values for s(sum), q(squared sum), and ip(inner product)
@@ -405,12 +325,11 @@ void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int
         ip_12  += vector1[i] * vector2[i];
     }
     // Shift vector0/1/2 starting from i=1 can calculate directional indexes
-    for(int i=0; i < (DI_array_length - w*3 - k + 1); i++){
+    for(int i=0; i < (DI_array_length - w - random_string_length - k + 1); i++){
         if(s_0 == s_1 && s_1 == s_2){}
         else{
-            fprintf(stderr, "inconsistency in fill_directional_index\n");
+            fprintf(stderr, "inconsistency in fill_directional_index_tmp\n");
             exit(EXIT_FAILURE);
-            
         }
         // Compute the directional index at i
         double sd_0    = sqrt(q_0 * pow4[k] - s_0 * s_0);
@@ -428,7 +347,8 @@ void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int
             P_12 = 0;
         }
         double DI =  P_12 - P_01;
-        directional_index[i+w] = DI;    // Note that DI is computed for position i+w (NOT i !!)
+        // Note that DI is computed for position i+w (NOT i !!)
+        directional_index_tmp[i+w] = DI;
         
 #ifdef DUMP_DI_PCC
         int real_pos = i+w-random_string_length;
@@ -437,19 +357,16 @@ void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int
             //fprintf(stdout, "%i,%f\n", real_pos, DI);   // Directional index
         }
 #endif
-
-        //-------------------------------------------------------------------
         // Incremental updates of s, q, and ip
-        
         // Determine positions to be updated
         // dec_i_v0 means the position in vector0 was decremented.
         int dec_i_v0, inc_i_v0, dec_i_v1, inc_i_v1, dec_i_v2, inc_i_v2;
-        dec_i_v0 = inputString[i];
-        inc_i_v0 = inputString[i + w];
-        dec_i_v1 = inputString[i + w];
-        inc_i_v1 = inputString[i + w*2];
-        dec_i_v2 = inputString[i + w*2];
-        inc_i_v2 = inputString[i + w*3];
+        dec_i_v0 = inputString_w_rand[i];
+        inc_i_v0 = inputString_w_rand[i + w];
+        dec_i_v1 = inputString_w_rand[i + w];
+        inc_i_v1 = inputString_w_rand[i + w*2];
+        dec_i_v2 = inputString_w_rand[i + w*2];
+        inc_i_v2 = inputString_w_rand[i + w*3];
         
         // Subtract changes before updates
         // vector0, decrement
@@ -528,257 +445,200 @@ void fill_directional_index(int DI_array_length, int w, int k, int inputLen, int
     }
 }
 
-
-int search_repeat_end(int DI_array_length, int w, int k, int search_pos, int end_pos){
-    
-    // initialize vectors
-    for(int i=0; i < 4 * BLK; i++){
-        // We set the three vectors to the vectors with 1s in place of the zero vector.
-        vector0[i] = 0; // the vector starting from position search_pos
-        vector1[i] = 0; // a moving window
-    }
-    // At the initial step
-    for(int i=0; i<w; i++){
-        vector0[ inputString[search_pos + i] ]++;
-        vector1[ inputString[search_pos + i + w] ]++;
-    }
-    // See the definition of Pearson's CC in https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-    // Compute the initial values for s(sum), q(squared sum), and ip(inner product)
-    double s_0, s_1, q_0, q_1, ip_01;
-    s_0 = 0; s_1 = 0; q_0 = 0; q_1 = 0; ip_01 = 0;
-    for(int i=0; i<pow4[k]; i++){
-        s_0    += vector0[i];
-        s_1    += vector1[i];
-        q_0    += vector0[i] * vector0[i];
-        q_1    += vector1[i] * vector1[i];
-        ip_01  += vector0[i] * vector1[i];
-    }
-    // Shift vector1
-    for(int i=search_pos; i < (DI_array_length - w*3 - k + 1); i++){
-        if(s_0 == s_1){}
-        else{
-            fprintf(stderr, "inconsistency in search_end_pos\n");
-            exit(EXIT_FAILURE);
-            
+void put_local_maximum_into_directional_index(int DI_array_length, int w){
+    // Search for local maximums
+    double local_max = -1;  // Set it to the mimimum -1
+    int   local_max_i = -1;
+    for(int i=0; i < DI_array_length; i++){
+        if( local_max < directional_index_tmp[i] ){
+            local_max = directional_index_tmp[i];
+            local_max_i = i;
         }
-        // Compute the directional index at i
-        double sd_0    = sqrt(q_0 * pow4[k] - s_0 * s_0);
-        double sd_1    = sqrt(q_1 * pow4[k] - s_1 * s_1);
-        double P_01;
-        if(sd_0*sd_1 > 0){
-            P_01 = (ip_01 * pow4[k] - s_0 * s_1)/(sd_0 * sd_1);
-        }else{  // When one of the two SDs is zero.
-            P_01 = 0;
-        }
-        
-        // Exit if the Pearson's CC gets smaller than MIN_PearsonCC.
-        if(P_01 < MIN_PearsonCC){
-            //exit(EXIT_FAILURE);
-            if(i + w*2 < end_pos){
-                return(i + w*2);    // vector 1 starts at ends at i + w*2
-            }else{
-                return(end_pos);
+        if(local_max_i + w < i &&
+           directional_index[local_max_i] < local_max &&
+           MIN_MAX_DI < local_max )
+        {
+            // The position, local_max_i, was updated more than w before the current position i.
+            // It must be also greater than the maximum at the position.
+            // Search for a local minimum
+            double local_min = 1;   // Set it to the maximum 1
+            int local_min_j = local_max_i;
+            for(int j=local_max_i; j < DI_array_length; j++){
+                // Search the temporary directional index array !!
+                if( local_min > directional_index_tmp[j] ){
+                    local_min = directional_index_tmp[j];
+                    local_min_j = j;
+                }
+                if(local_min_j + w < j){
+                    directional_index[local_max_i] = local_max;
+                    directional_index_w[local_max_i] = w;
+                    directional_index_end[local_max_i] = local_min_j + w;  // set the end position
+                    i = local_min_j + w;
+                    break;
+                }
             }
-        }
-        //-------------------------------------------------------------------
-        // Incremental updates of s, q, and ip
-        
-        // Determine positions to be updated
-        // dec_i_v1 means the position in vector 1 was decremented.
-        int dec_i_v1, inc_i_v1;
-        dec_i_v1 = inputString[i + w];
-        inc_i_v1 = inputString[i + w*2];
-
-        // if dec_i_v1 == inc_i_v1, vectors 0 and 1 remain the same.
-        // Otherwise, update vector 1
-        if( dec_i_v1 != inc_i_v1 ){
-            // Subtract changes before updates
-            q_1   -= pow(vector1[ dec_i_v1 ], 2);
-            q_1   -= pow(vector1[ inc_i_v1 ], 2);
-            ip_01 -= vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
-            ip_01 -= vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
-            
-            // Update vectors and save the previous values before decrement/increment vectors
-            vector1[ dec_i_v1 ]--;  s_1--;
-            vector1[ inc_i_v1 ]++;  s_1++;
-            
-            // Add changes after updates
-            q_1   += pow(vector1[ dec_i_v1 ], 2);
-            q_1   += pow(vector1[ inc_i_v1 ], 2);
-            ip_01 += vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
-            ip_01 += vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
+            local_max = -1;
+            local_min = 1;
         }
     }
-    return(-1);
 }
 
 
-int find_best_candidate_region(int inputLen, int w, int k, int search_pos, int end_pos, int *max_start, int *max_end, double *max_DI_answer, int print_multiple_TR, int use_big_window){
-  
-    int random_string_length;
-    if(inputLen < w * 5){
-        random_string_length = inputLen;
-    }else{
-        random_string_length = w * 5;
-    }
+void fill_directional_index_with_end(int DI_array_length, int inputLen, int k, int random_string_length){
     
     // Put random sequences of the input length before and after the input string
     init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
-
-    // Shift positions by the length of random sequences
-    search_pos += random_string_length;
-    end_pos += random_string_length;
     
-    int DI_array_length = inputLen + random_string_length*2;
-    fill_directional_index( DI_array_length, w, k, inputLen, random_string_length);
-
-    // Search for a position with the maximum value
-    int max_pos = search_pos;
-    double max_DI = 0;
-    for(int i=search_pos; i + w < end_pos; i++){ // We need to require i + w < end_pos
-        if( max_DI < directional_index[i] ){
-            max_pos = i;
-            max_DI  = directional_index[max_pos];
-        }
+    // initialize directional _index
+    for(int i=0; i<DI_array_length; i++){
+        directional_index[i]   = -1;
+        directional_index_end[i] = -1;
     }
-    int found = 0;
-    if(MIN_MAX_DI < max_DI){
-        // Make sure that all the positions in the range starting with max_pos have sufficiently high PearsonCC
-        int repeat_end = search_repeat_end(DI_array_length, w, k, max_pos, end_pos);
-        if( -1 < repeat_end){
-            found = 1;
-            // Restore the original coordinates
-            *max_start = max_pos - random_string_length;
-            *max_end   = repeat_end -random_string_length;
-            *max_DI_answer = max_DI;
-        }
-    }
-    return(found);
-}
-
-void handle_one_TR(char *readID, int inputLen, int search_pos, int end_pos, int print_multiple_TR, int use_big_window){
-    
-    if( end_pos < search_pos + MIN_PERIOD * MIN_NUM_FREQ_UNIT ){
-        return;
-    }
-    struct timeval s_time, e_time;
-
-#ifdef DEBUG_window_kmer
-    fprintf(stderr, "search\t\t%i\t%i\n", search_pos, end_pos);
-#endif
-    
-    int max_w, max_k, max_start, max_end;
-    // Locate the non-overlapping regions of tandem repeats
-    if(search_pos < end_pos){
-        int found = 0;
-        double tmp_measure = 0;
-        double max_measure = 0;
-        double tmp_DI, max_DI;
-        int tmp_start, tmp_end;
-        
-        // Search for an optimal range with a candidate tandem repeat
-        gettimeofday(&s_time, NULL);
-        int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
-        
-        for(int w = min_window_size; w < max_window_size && w < inputLen/2; ){
-            int found_one =
-            find_best_candidate_region(
-                inputLen, w, k, search_pos, end_pos,
-                &tmp_start, &tmp_end, &tmp_DI, print_multiple_TR, use_big_window);
-            if(found_one == 1) {
-                // select a longer range staring with the maximum DI
-                tmp_measure = tmp_end - tmp_start; // Or you can use tmp_DI as the measure
-                if( max_measure < tmp_measure ){
-                    max_measure = tmp_measure;
-                    max_DI = tmp_DI;
-                    max_w = w;
-                    max_k = k;
-                    max_start = tmp_start;
-                    max_end   = tmp_end;
-                    found = 1;
-                }
-            }
-            // Sizes of windows
-            if(w < 100){
-                w += 20;
-            }else if(w < 1000){
-                w += 300;
-            }else if(w < 10000){
-                w += 2000;
-            }else{
-                w += 20000;
-            }
-        }
-        gettimeofday(&e_time, NULL);
-        time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
-        
-        if(found){
-            gettimeofday(&s_time, NULL);
-            
-            int query_start = max_start;
-            int query_end   = max_end;
-            
-#ifdef DEBUG_window_kmer
-            fprintf(stderr, "Divide w=%i\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
-#endif
-
-            int predicted_rep_period, max_pos;
-            init_inputString(max_k, inputLen);  // Regenerate the inputString from the original input
-            predicted_rep_period_and_max_position( query_start, query_end, inputLen, &predicted_rep_period, &max_pos, 4);
-            find_tandem_repeat( query_start, query_end ,
-                predicted_rep_period, readID, inputLen, &RRs[0], &RRs[1]);
-            
-            gettimeofday(&e_time, NULL);
-            time_period
-                += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
-            
-            
-            int qualified_repeat = 0;
-            if(   RRs[0].repeat_len > 0
-               && RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end
-            ){
-                qualified_repeat = 1;
-            }
-            
-            repeat_in_read tmp_rr;
-            if(qualified_repeat){
-                tmp_rr = RRs[0];
-                query_start   = tmp_rr.rep_start;
-                query_end     = tmp_rr.rep_end;
-#ifdef DEBUG_window_kmer
-                fprintf(stderr, "Re-div w=%i\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
-#endif
-            }
-            
-            // Perform recursively
-            if(print_multiple_TR == 1){
-                handle_one_TR(readID, inputLen, search_pos, query_start,  print_multiple_TR, use_big_window);
-                if(qualified_repeat){
-#ifdef DEBUG_window_kmer
-                    fprintf(stderr, "w=%i\t\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
-#endif
-                    print_one_repeat_in_read(tmp_rr);
-                }
-                handle_one_TR(readID, inputLen, query_end, end_pos,    print_multiple_TR, use_big_window);
-            }else{
-                if(qualified_repeat){
-#ifdef DEBUG_window_kmer
-                    fprintf(stderr, "w=%i\t\t%i\t%i\t%f\n", max_w, query_start, query_end, max_DI);
-#endif
-                    print_one_repeat_in_read(tmp_rr);
-                }
-            }
+    for(int w = min_window_size; w < max_window_size && w < inputLen/2; ){
+        fill_directional_index_tmp( DI_array_length, w, k, inputLen, random_string_length);
+        put_local_maximum_into_directional_index( DI_array_length, w );
+        // Sizes of windows
+        if(w < 100){
+            w += 20;
+        }else if(w < 1000){
+            w += 300;
+        }else if(w < 20000){
+            w += 2000;
         }else{
-#ifdef DEBUG_window_kmer
-            fprintf(stderr, "Not found\n");
-#endif
+            w += 10000;
         }
     }
-
+    
+    //  By removing random sequences of both ends, retain directional indexes of the input
+    for(int i=0; i<inputLen; i++){
+        int shifted_i = i + random_string_length;
+        directional_index[i]    = directional_index[shifted_i];
+        directional_index_end[i]= directional_index_end[shifted_i] - random_string_length;
+        directional_index_w[i]  = directional_index_w[shifted_i];
+    }
+    for(int i=inputLen; i<DI_array_length; i++){
+        directional_index[i]    = -1;
+        directional_index_end[i]= -1;
+        directional_index_w[i]  = -1;
+    }
 }
 
-void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR, int use_big_window){
-    handle_one_TR(readID, inputLen, 0, inputLen, print_multiple_TR, use_big_window);
+void insert_an_alignment(repeat_in_read rr){
+    insert_an_alignment_into_set(
+           rr.readID,
+           rr.inputLen,
+           rr.rep_start,
+           rr.rep_end,
+           rr.repeat_len,
+           rr.rep_period,
+           rr.Num_freq_unit,
+           rr.Num_matches,
+           rr.Num_mismatches,
+           rr.Num_insertions,
+           rr.Num_deletions,
+           rr.Kmer,
+           rr.ConsensusMethod,
+           rr.string
+    );
+}
+
+void remove_redundant_ranges_from_directional_index(int query_start, int query_end){
+    for(int i=query_start; i<query_end; i++){
+        if( directional_index[i] != -1 &&
+            directional_index_end[i] < query_end )
+        {
+            directional_index[i]    = -1;
+            directional_index_end[i]= -1;
+            directional_index_w[i]  = -1;
+        }
+    }
+}
+
+void handle_one_TR(char *readID, int inputLen, int print_multiple_TR){
+
+    struct timeval s_time, e_time;
+    
+    //
+    // Locate overlapping regions of tandem repeats
+    //
+    gettimeofday(&s_time, NULL);
+    
+    int k = 4;  // Setting k to 3 is inferior to k = 4 when units are of length  5.
+    int random_string_length;
+    if(inputLen < max_window_size * 2){
+        random_string_length = inputLen;
+    }else{
+        random_string_length = max_window_size * 2;
+    }
+    int DI_array_length = inputLen + random_string_length*2;
+    fill_directional_index_with_end(DI_array_length, inputLen, k, random_string_length);
+
+    gettimeofday(&e_time, NULL);
+    time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
+
+#ifdef DEBUG_finding_ranges
+    fprintf(stderr, "before removing non proper ranges --------------\n");
+    for(int i=0; i<inputLen; i++){
+        if(MIN_MAX_DI < directional_index[i] ){
+            fprintf(stderr, "%i\t%i\t%i\t%i\t%f\n",
+                    i,
+                    directional_index_end[i],
+                    (directional_index_end[i]- i),
+                    directional_index_w[i],
+                    directional_index[i]);
+        }
+    }
+#endif
+    
+    //
+    // Search for positions with tandem repeats
+    //
+    gettimeofday(&s_time, NULL);
+    
+    for(int query_start=0; query_start < inputLen; query_start++){
+        int query_end = directional_index_end[query_start];
+        int width         = directional_index_w[query_start];
+        if( MIN_MAX_DI < directional_index[query_start] ){
+            if(-1 < query_end){
+                // Move onto de Bruijn graph construction
+                find_tandem_repeat( query_start, query_end, width, readID, inputLen, k, &RRs[0], &RRs[1]);
+                // Examine if a qualified TR is found
+                if( RRs[0].repeat_len > 0 &&
+                    RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
+                {
+                    insert_an_alignment(RRs[0]);
+                    remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
+                }
+            }
+        }
+    }
+    if(print_multiple_TR)
+        chaining();
+    else
+        search_max();
+
+    gettimeofday(&e_time, NULL);
+    time_period += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
+    
+#ifdef DEBUG_finding_ranges
+    fprintf(stderr, "after removing non proper ranges --------------\n");
+    for(int i=0; i<inputLen; i++){
+        if(MIN_MAX_DI < directional_index[i] ){
+            fprintf(stderr, "%i\t%i\t%i\t%i\t%f\n",
+                    i,
+                    directional_index_end[i],
+                    (directional_index_end[i]- i),
+                    directional_index_w[i],
+                    directional_index[i]);
+        }
+    }
+#endif
+    
+}
+
+void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR)
+{
+    handle_one_TR(readID, inputLen, print_multiple_TR);
 }
 
 
