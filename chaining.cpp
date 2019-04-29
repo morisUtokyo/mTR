@@ -1,5 +1,6 @@
 #include "chaining.h"
 #include "mTR.h"
+#include <stdio.h>
 #include <iostream>
 #include <set>
 #include <map>
