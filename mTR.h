@@ -11,19 +11,16 @@
 #define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
 #define MIN_PERIOD 2            // Minimum period length
 #define MAX_PERIOD 500          // Maximum period length
+#define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 
-// Window size parameters for locating the boundaries of tandem repeats
-#define MIN_WINDOW 20
-#define MAX_WINDOW 20000
-
-// Heuristic parameter values for filtering out reads with less meaningful tandem repeats
-#define MIN_MAX_DI 0.5
 
 // The following values are optimzed for a benchmark dataset.
+#define MIN_WINDOW 20   // Window size parameters for locating the boundaries of tandem repeats
+#define MAX_WINDOW 20000
+#define MIN_MAX_DI 0.5  // For filtering out reads with less meaningful tandem repeats
 #define minKmer 5
-#define maxKmer 11    // Increase this when no qualified repeats are found.
-#define BLK 1024                // Block size of input buffer.
-#define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
+#define maxKmer 11      // Increase this when no qualified repeats are found.
+#define BLK 1024        // Block size of input buffer.
 #define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
 
 
@@ -58,7 +55,7 @@ int *rep_unit_string;   // String of representative unit of the focal repeat. Th
 int *WrapDP;            // 2D space for Wrap-around global alignment DP for handling tandem repeats
                         // The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 int **consensus, **gaps;  // Space for consensus
-int min_window_size, max_window_size;
+
 
 typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     ID;  // 0,1,2,...
@@ -89,6 +86,7 @@ repeat_in_read *RRs;
 
 int handle_one_file(char *inputFile, int print_multiple_TR);
 void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR);
+void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
 int search_De_Bruijn_graph(int max_start, int max_end, int inputLen, int k);
 void wrap_around_DP(
    int *rep_unit, int unit_len, int *rep, int rep_len,

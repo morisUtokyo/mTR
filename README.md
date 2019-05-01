@@ -9,8 +9,9 @@ usage:  mTR <fasta file>
          This is the default setting, and can be omitted.
 
 Command examples:
-mTR -s      A single tandem repeat
-mTR -m     Multiple tandem repeats
+mTR   <fasta file>        Multiple tandem repeats
+mTR -m  <fasta file>    Multiple tandem repeats
+mTR -s   <fasta file>    A single tandem repeat
 
 /*-----------------------------------------
 Features associated with one read with repeats

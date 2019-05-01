@@ -37,8 +37,6 @@ int main(int argc, char *argv[])
                     case 's':   print_multiple_TR = 0; break;
                 }
             }
-            min_window_size = MIN_WINDOW;
-            max_window_size = MAX_WINDOW;
         }
     }else{
         print_error_message();
