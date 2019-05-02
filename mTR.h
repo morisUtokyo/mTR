@@ -113,6 +113,6 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 //#define DUMP_DI_PCC
 
 //#define DEBUG_finding_ranges
-#define PRINT_COMP_TIME
+//#define PRINT_COMP_TIME
 
 

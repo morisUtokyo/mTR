@@ -145,14 +145,21 @@ void init_inputString(int k, int query_start, int query_end, int inputLen){
     struct timeval s, e;
     gettimeofday(&s, NULL);
     
+    // -------------------------------------------------------------------------------
+    // For performance improvement, we update the range from query_start to query_end
+    // Outside the range, the values of inputString are not reliable.
+    // -------------------------------------------------------------------------------
     //for(int i=0; i<inputLen; i++){
     for(int i = query_start; i < query_end+k-1 && i < inputLen; i++){
         inputString[i] = orgInputString[i];
     }
+    
     int tmp = 0;
+    // for(int i = 0; i < k-1; i++){
     for(int i = query_start; i < query_start+k-1; i++){
         tmp = 4 * tmp + inputString[i];  // compute 4 decimal of first k-1 letters
     }
+    
     int pow4k_1 = pow4[k-1];
     //for(int i=0; i<(inputLen-k+1); i++){
     for(int i = query_start; i < query_end && i < (inputLen-k+1); i++){
