@@ -21,7 +21,7 @@
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
 #define BLK 1024        // Block size of input buffer.
-#define WrapDPsize  20000000    // 10M  > repeat_unit_size (100) x num_of_repeats (100,000)
+#define WrapDPsize  200000000    // 200M  = repeat_unit_size (200) x length_of_repeats (1,000,000)
 
 
 // Parameters for global and wrap around alignment
