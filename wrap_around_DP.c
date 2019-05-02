@@ -5,6 +5,7 @@
 //  Created by Shinichi Morishita on 2017/10/06.
 //
 
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -19,8 +20,12 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
                     int *return_matches,    int *return_mismatches,
                     int *return_insertions, int *return_deletions){
     
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
     int i, j;
     int next = unit_len+1;
+    
     
     
 #ifdef DEBUG_algorithm_wrap_around
@@ -162,6 +167,8 @@ void wrap_around_DP(int *rep_unit, int unit_len, int *rep, int rep_len,
            (float)Num_deletions/actual_repeat_len,
            Num_matches*MATCH_GAIN + Num_mismatches*MISMATCH_PENALTY + Num_insertions * INDEL_PENALTY + Num_deletions * INDEL_PENALTY);
 #endif
-    
+ 
+    gettimeofday(&e, NULL);
+    time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
 }
 

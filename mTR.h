@@ -101,7 +101,7 @@ int progressive_multiple_alignment(
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
 
-float time_all, time_memory, time_range, time_period, time_predicted_rep_period_and_max_position, time_wrap_around_DP, time_search_De_Bruijn_graph, time_progressive_multiple_alignment, time_count_table;
+float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_search_De_Bruijn_graph, time_count_table, time_chaining;
 
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
@@ -113,6 +113,6 @@ float time_all, time_memory, time_range, time_period, time_predicted_rep_period_
 //#define DUMP_DI_PCC
 
 //#define DEBUG_finding_ranges
-//#define PRINT_COMP_TIME
+#define PRINT_COMP_TIME
 
 

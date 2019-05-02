@@ -79,7 +79,8 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
 void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_string_length){
     init_genrand(0);
     
-    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString_w_rand[i] = (int)(genrand_int32()%4);}
+    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString_w_rand[i] = (int)(genrand_int32()%4);
+    }
     
     for(int i = 0; i < random_string_length; i++){
         inputString_w_rand[i] = (int)(genrand_int32()%4);
@@ -299,6 +300,9 @@ void put_local_maximum_into_directional_index(int DI_array_length, int w){
 
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length){
     
+    struct timeval s_time, e_time;
+    gettimeofday(&s_time, NULL);
+    
     // initialize directional _index
     for(int i=0; i<DI_array_length; i++){
         directional_index[i]   = -1;
@@ -348,4 +352,7 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         directional_index_end[i]= -1;
         directional_index_w[i]  = -1;
     }
+    
+    gettimeofday(&e_time, NULL);
+    time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
 }
