@@ -290,6 +290,9 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR){
                 if( RRs[0].repeat_len > 0 &&
                     RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
                 {
+#ifdef DEBUG_finding_ranges
+                    fprintf(stderr, "Change from %i-%i to %i-%i\n", query_start, query_end, RRs[0].rep_start, RRs[0].rep_end);
+#endif
                     insert_an_alignment(RRs[0]);
                     remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
                 }

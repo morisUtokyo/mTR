@@ -190,7 +190,7 @@ void chaining(){
         return;
     }
     multimap<int, Alignment*> sorted_by_X;
-    map<int, Alignment*> sorted_by_Y;
+    multimap<int, Alignment*> sorted_by_Y;
     
     // Sort alignments with their start and end positions
     for(set<Alignment*>::iterator iter = set_of_alignments.begin();
@@ -206,13 +206,13 @@ void chaining(){
         iter++)
     {
         Alignment* tmpX_alignment = iter->second;
-        map<int, Alignment*>::iterator tmpY, prevY;
+        multimap<int, Alignment*>::iterator tmpY, prevY;
         
         if(tmpX_alignment->isStart(iter->first)){
 #ifdef DEBUG_chaining
             // Pair of an alignment and its start position
-            cout << "\nS " << iter->first << "\t" << tmpX_alignment->start_y << "\t";
-            tmpX_alignment->print();
+            cout << "\nS " << iter->first << "\t";
+            tmpX_alignment->print_one_TR();
             
             cout << "tmpY";
             if(sorted_by_Y.empty()){
@@ -221,7 +221,7 @@ void chaining(){
                 cout << " has\n";
                 for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++){
                     cout << tmpY->first << "\t";
-                    tmpY->second->print();
+                    tmpY->second->print_one_TR();
                 }
             }
 #endif
@@ -235,7 +235,7 @@ void chaining(){
                     {
                         tmpX_alignment->set_predecessor(prevY->second);
 #ifdef DEBUG_chaining
-                        cout << "Set predececcor\t"; tmpX_alignment->print();
+                        cout << "Set predececcor\t"; tmpX_alignment->print_one_TR();
 #endif
                         break;
                     }
@@ -245,7 +245,7 @@ void chaining(){
                 {
                     tmpX_alignment->set_predecessor(prevY->second);
 #ifdef DEBUG_chaining
-                    cout << "Set predececcor\t"; tmpX_alignment->print();
+                    cout << "Set predececcor\t"; tmpX_alignment->print_one_TR();
 #endif
                 }
             }
@@ -253,14 +253,14 @@ void chaining(){
 #ifdef DEBUG_chaining
             // Pair of an alignment and its end position
             cout << "\nE " << iter->first << "\t";
-            tmpX_alignment->print();
+            tmpX_alignment->print_one_TR();
 #endif
             
             if(sorted_by_Y.empty()){
                 sorted_by_Y.insert(make_pair(tmpX_alignment->end_y, tmpX_alignment));
 #ifdef DEBUG_chaining
-                cout << "insert\t" << tmpX_alignment->end_y << "\t";
-                tmpX_alignment->print();
+                cout << "insert\t";
+                tmpX_alignment->print_one_TR();
 #endif
             }else{
                 bool flag = true;   // flag for indicating that tmpX_alignment should be inserted
@@ -275,18 +275,19 @@ void chaining(){
                 if(flag){
                     sorted_by_Y.insert(make_pair(tmpX_alignment->end_y, tmpX_alignment));
 #ifdef DEBUG_chaining
-                    cout << "insert\t" << tmpX_alignment->end_y << "\t";
-                    tmpX_alignment->print();
+                    cout << "insert\t";
+                    tmpX_alignment->print_one_TR();
 #endif
                     // Delete unnecessary alignments
                     for(tmpY = sorted_by_Y.begin();
                         tmpY != sorted_by_Y.end();
-                        tmpY++){
+                        tmpY++)
+                    {
                         if(tmpY->second->end_y >= tmpX_alignment->end_y &&
                            tmpY->second->score < tmpX_alignment->score)
                         {
 #ifdef DEBUG_chaining
-                            cout << "delete\t"; tmpY->second->print();
+                            cout << "delete\t"; tmpY->second->print_one_TR();
 #endif
                             sorted_by_Y.erase(tmpY);
                         }
@@ -301,7 +302,7 @@ void chaining(){
                 cout << " has\n";
                 for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++){
                     cout << tmpY->first << "\t";
-                    tmpY->second->print();
+                    tmpY->second->print_one_TR();
                 }
             }
 #endif
@@ -323,7 +324,7 @@ void chaining(){
         iter != sorted_by_X.end(); iter++){
         sorted_by_X.erase(iter);
     }
-    for(map<int, Alignment*>::iterator iter = sorted_by_Y.begin();
+    for(multimap<int, Alignment*>::iterator iter = sorted_by_Y.begin();
         iter != sorted_by_Y.end(); iter++){
         sorted_by_Y.erase(iter);
     }
