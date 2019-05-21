@@ -1,12 +1,12 @@
 # mTR
 Use Makefile to generate an executable file "mTR".
 
-usage:  mTR <fasta file>
-            mTR  [-s|-m] <fasta file> 
+usage: mTR [-msp] <file name>
 
 -s:     Output the longest tandem repeat in each read. 
 -m:    Output multiple non-overlapping tandem repeats. 
          This is the default setting, and can be omitted.
+-p:     Output the alignment between the input sequence and predicted tandem repeat.
 
 Command examples:
 mTR   <fasta file>        Multiple tandem repeats

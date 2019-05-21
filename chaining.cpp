@@ -69,7 +69,7 @@ public:
         
 	}
     
-    void print_one_TR()const{
+    void print_one_TR(int print_alignment)const{
         printf(
                "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
                //rr.ID,
@@ -89,14 +89,33 @@ public:
                ConsensusMethod,
                string
                );
+        
+        if(print_alignment == 1){
+            int rep_unit[MAX_PERIOD];
+            int intBase;
+            for(int i=0; i<rep_period; i++){   // 1-origin index
+                switch(string[i]){
+                    case 'A': intBase = 0; break;
+                    case 'C': intBase = 1; break;
+                    case 'G': intBase = 2; break;
+                    case 'T': intBase = 3; break;
+                    default: fprintf(stderr, "fatal input char %c\n", string[i]);
+                }
+                rep_unit[i] = intBase;
+            }
+            rep_unit[rep_period] = rep_unit[0];
+            printf("\n");
+            pretty_print_alignment(rep_unit, rep_period, rep_start, rep_end);
+        }
+        
         fflush(stdout);
         
     }
-    void print_all_TRs()const{
+    void print_all_TRs(int print_alignment)const{
         if(predecessor != NULL){
-            predecessor->print_all_TRs();
+            predecessor->print_all_TRs(print_alignment);
         }
-        print_one_TR();
+        print_one_TR(print_alignment);
     }
 	void print_one_alignment()const{
 		cout << "(" <<	start_x << "," << start_y << ")\t-> (" << end_x << ","  << end_y <<
@@ -157,7 +176,7 @@ void insert_an_alignment_into_set(
                             string ));
 }
 
-void search_max(){
+void search_max(int print_alignment){
     if(set_of_alignments.empty()){
         return;
     }
@@ -176,7 +195,7 @@ void search_max(){
             max_alignment = (*iter);
         }
     }
-    max_alignment->print_one_TR();
+    max_alignment->print_one_TR(print_alignment);
     
     for(set<Alignment*>::iterator iter = set_of_alignments.begin();
         iter != set_of_alignments.end(); iter++){
@@ -185,7 +204,7 @@ void search_max(){
 }
 
 
-void chaining(){
+void chaining(int print_alignment){
     if(set_of_alignments.empty()){
         return;
     }
@@ -212,7 +231,7 @@ void chaining(){
 #ifdef DEBUG_chaining
             // Pair of an alignment and its start position
             cout << "\nS " << iter->first << "\t";
-            tmpX_alignment->print_one_TR();
+            tmpX_alignment->print_one_TR(print_alignment);
             
             cout << "tmpY";
             if(sorted_by_Y.empty()){
@@ -221,7 +240,7 @@ void chaining(){
                 cout << " has\n";
                 for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++){
                     cout << tmpY->first << "\t";
-                    tmpY->second->print_one_TR();
+                    tmpY->second->print_one_TR(print_alignment);
                 }
             }
 #endif
@@ -235,7 +254,7 @@ void chaining(){
                     {
                         tmpX_alignment->set_predecessor(prevY->second);
 #ifdef DEBUG_chaining
-                        cout << "Set predececcor\t"; tmpX_alignment->print_one_TR();
+                        cout << "Set predececcor\t"; tmpX_alignment->print_one_TR(print_alignment);
 #endif
                         break;
                     }
@@ -245,7 +264,7 @@ void chaining(){
                 {
                     tmpX_alignment->set_predecessor(prevY->second);
 #ifdef DEBUG_chaining
-                    cout << "Set predececcor\t"; tmpX_alignment->print_one_TR();
+                    cout << "Set predececcor\t"; tmpX_alignment->print_one_TR(print_alignment);
 #endif
                 }
             }
@@ -253,14 +272,14 @@ void chaining(){
 #ifdef DEBUG_chaining
             // Pair of an alignment and its end position
             cout << "\nE " << iter->first << "\t";
-            tmpX_alignment->print_one_TR();
+            tmpX_alignment->print_one_TR(print_alignment);
 #endif
             
             if(sorted_by_Y.empty()){
                 sorted_by_Y.insert(make_pair(tmpX_alignment->end_y, tmpX_alignment));
 #ifdef DEBUG_chaining
                 cout << "insert\t";
-                tmpX_alignment->print_one_TR();
+                tmpX_alignment->print_one_TR(print_alignment);
 #endif
             }else{
                 bool flag = true;   // flag for indicating that tmpX_alignment should be inserted
@@ -276,7 +295,7 @@ void chaining(){
                     sorted_by_Y.insert(make_pair(tmpX_alignment->end_y, tmpX_alignment));
 #ifdef DEBUG_chaining
                     cout << "insert\t";
-                    tmpX_alignment->print_one_TR();
+                    tmpX_alignment->print_one_TR(print_alignment);
 #endif
                     // Delete unnecessary alignments
                     for(tmpY = sorted_by_Y.begin();
@@ -287,7 +306,7 @@ void chaining(){
                            tmpY->second->score < tmpX_alignment->score)
                         {
 #ifdef DEBUG_chaining
-                            cout << "delete\t"; tmpY->second->print_one_TR();
+                            cout << "delete\t"; tmpY->second->print_one_TR(print_alignment);
 #endif
                             sorted_by_Y.erase(tmpY);
                         }
@@ -302,7 +321,7 @@ void chaining(){
                 cout << " has\n";
                 for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++){
                     cout << tmpY->first << "\t";
-                    tmpY->second->print_one_TR();
+                    tmpY->second->print_one_TR(print_alignment);
                 }
             }
 #endif
@@ -313,7 +332,7 @@ void chaining(){
 #ifdef DEBUG_chaining
     (sorted_by_Y.rbegin())->second->print_chain();
 #endif
-    (sorted_by_Y.rbegin())->second->print_all_TRs();
+    (sorted_by_Y.rbegin())->second->print_all_TRs(print_alignment);
     
     // delete all
     for(set<Alignment*>::iterator iter = set_of_alignments.begin();

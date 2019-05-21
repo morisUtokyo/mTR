@@ -32,6 +32,9 @@ void free_global_variables_and_exit(){
     if(count_period_all  != NULL){ free(count_period_all); }
     if(rep_unit_string   != NULL){ free(rep_unit_string); }
     if(WrapDP            != NULL){ free(WrapDP); }
+    if(alignment_input   != NULL){ free(alignment_input); }
+    if(alignment_symbols != NULL){ free(alignment_symbols); }
+    if(alignment_repeats != NULL){ free(alignment_repeats); }
     for(int i=0; i<(MAX_PERIOD + 1); i++){
         if( consensus[i] != NULL ){ free(consensus[i]); }
     }
@@ -72,16 +75,16 @@ void malloc_global_variables(){
     RRs = (repeat_in_read*) malloc(2*sizeof(repeat_in_read));
     if( RRs == NULL ){ free_global_variables_and_exit(); }
     
-    directional_index_tmp = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    directional_index_tmp   = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
     if( directional_index_tmp == NULL ){ free_global_variables_and_exit(); }
     
-    directional_index = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    directional_index       = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
     if( directional_index == NULL ){ free_global_variables_and_exit(); }
     
-    directional_index_end = (int *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    directional_index_end   = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( directional_index_end == NULL ){ free_global_variables_and_exit(); }
     
-    directional_index_w = (int *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
+    directional_index_w     = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( directional_index_w == NULL ){ free_global_variables_and_exit(); }
     
     vector0 = (int *)malloc(sizeof(int) * 4 * BLK);
@@ -93,17 +96,26 @@ void malloc_global_variables(){
     vector2 = (int *)malloc(sizeof(int) * 4 * BLK);
     if( vector2 == NULL ){ free_global_variables_and_exit(); }
     
-    freq_interval_len = (double *)malloc( sizeof(double) * MAX_INPUT_LENGTH);
+    freq_interval_len   = (double *)malloc( sizeof(double) * MAX_INPUT_LENGTH);
     if( freq_interval_len == NULL ){ free_global_variables_and_exit(); }
     
-    count_period_all= (int *)malloc( sizeof(int) * MAX_PERIOD);
+    count_period_all    = (int *)malloc( sizeof(int) * MAX_PERIOD);
     if( count_period_all == NULL ){ free_global_variables_and_exit(); }
     
-    rep_unit_string = (int *)malloc( sizeof(int) * MAX_PERIOD);
+    rep_unit_string     = (int *)malloc( sizeof(int) * MAX_PERIOD);
     if( rep_unit_string == NULL ){ free_global_variables_and_exit(); }
     
     WrapDP          = (int *)malloc(sizeof(int) * WrapDPsize);
     if( WrapDP == NULL ){ free_global_variables_and_exit(); }
+    
+    alignment_input = (char *)malloc(sizeof(char) * MAX_INPUT_LENGTH);
+    if( alignment_input == NULL ){ free_global_variables_and_exit(); }
+    
+    alignment_symbols = (char *)malloc(sizeof(char) * MAX_INPUT_LENGTH);
+    if( alignment_symbols == NULL ){ free_global_variables_and_exit(); }
+    
+    alignment_repeats = (char *)malloc(sizeof(char) * MAX_INPUT_LENGTH);
+    if( alignment_repeats == NULL ){ free_global_variables_and_exit(); }
     
     consensus = malloc(sizeof(int *) * (MAX_PERIOD + 1));
     if( consensus == NULL ){ free_global_variables_and_exit(); }
@@ -139,6 +151,9 @@ void free_global_variables(){
     free(count_period_all);
     free(rep_unit_string);
     free(WrapDP);
+    free(alignment_input);
+    free(alignment_symbols);
+    free(alignment_repeats);
     for(int i=0; i<(MAX_PERIOD + 1); i++){ free(consensus[i]); }
     for(int i=0; i<(MAX_PERIOD + 1); i++){ free(gaps[i]); }
     free(consensus);
@@ -146,7 +161,7 @@ void free_global_variables(){
     
 }
 
-int handle_one_file(char *inputFile, int print_multiple_TR){
+int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment){
     //---------------------------------------------------------------------------
     // Feed a string from a file, convert the string into a series of integers
     //---------------------------------------------------------------------------
@@ -182,7 +197,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR){
                 firstRead = 0;
             }else{  // Process the previous read if the current read is not the first one.
                 inputLen = cnt;
-                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
+                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, print_alignment);
                 read_cnt++;
             }
             // Feed the header of the read.
@@ -215,7 +230,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR){
         }
     }
     inputLen = cnt;
-    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR);
+    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, print_alignment);
     read_cnt++;
 
     

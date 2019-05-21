@@ -15,8 +15,9 @@ extern "C" {
                           int   Kmer,
                           int   ConsensusMethod,
                           char* string );
-    void chaining();
-    void search_max();
+    void chaining(int print_alignment);
+    void search_max(int print_alignment);
     void delete_set_of_alignments();
+    extern void pretty_print_alignment(int *rep_unit, int unit_len, int rep_start, int rep_end);
 }
 #endif

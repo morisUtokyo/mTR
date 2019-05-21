@@ -321,7 +321,7 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
     }
     
     // For finding longer tandem repeats
-    k = 5;
+    k = 5; 
     init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
         // Put random sequences of the input length before and after the input string
     for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; )

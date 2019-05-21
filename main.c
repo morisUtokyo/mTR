@@ -12,19 +12,17 @@
 #include "mTR.h"
 
 void print_error_message(){
-    fprintf(stderr, "Arguments must be of the form (-m|-s) <file name> \n");
+    fprintf(stderr, "mTR [-msp] <file name> \n");
     fprintf(stderr, "-m: Output multiple tandem repeats (default setting). \n");
     fprintf(stderr, "-s: Output the longest tandem repeat. \n");
+    fprintf(stderr, "-p: Output the alignment between the input sequence and predicted tandem repeat. \n");
 }
 
 int main(int argc, char *argv[])
 {
-    // <command> -m <fasta file>    Feed <fasta file>, detect repeats, and print <clustering results>.
-    // <command> -s <fasta file>    Feed <fasta file> and print <reads with repeats>.
-
-    
     char *inputFile;
     int print_multiple_TR = 1;
+    int print_alignment   = 0;
 
     if(argc == 2){
         print_multiple_TR = 1;
@@ -34,7 +32,9 @@ int main(int argc, char *argv[])
         if(*p == '-' ){
             for(p++; *p != '\0'; p++){
                 switch(*p){
-                    case 's':   print_multiple_TR = 0; break;
+                    case 's':   print_multiple_TR = 0;  break;
+                    case 'm':   print_multiple_TR = 1;  break;
+                    case 'p':   print_alignment   = 1;  break;
                 }
             }
         }
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     
     inputFile = argv[2];
     fprintf(stderr, "The input file name is %s.\n", inputFile);
-    int read_cnt = handle_one_file(inputFile, print_multiple_TR);
+    int read_cnt = handle_one_file(inputFile, print_multiple_TR, print_alignment);
     fprintf(stderr, "Number of reads is %i.\n", read_cnt);
     
     gettimeofday(&e, NULL);

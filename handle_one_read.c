@@ -81,28 +81,11 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
     }
     
     int ConsensusMethod = DeBruijnGraphSearch;
-    /*
-     //  If a repeat unit is found, actual_rep_period > 0, and = 0 otherwise.
-     if(actual_rep_period > 0){
-     // A De Bruijin graph search is successful.
-     ConsensusMethod = DeBruijnGraphSearch;
-     }else{
-     // If the De Bruijn graph search fails, try a progressive  multiple alignment.
-     ConsensusMethod = ProgressiveMultipleAlignment;
-     
-     gettimeofday(&s, NULL);
-     actual_rep_period = progressive_multiple_alignment( query_start, query_end, max_pos, predicted_rep_period, k, inputLen, pow4[k] );
-     gettimeofday(&e, NULL);
-     time_progressive_multiple_alignment
-     += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-     }
-     */
+
     
     //---------------------------------------------------------------------------
     // Compute the accuracy of the representative unit string by wrap-around DP
     //---------------------------------------------------------------------------
-    
-
     
     if(actual_rep_period * (query_end - query_start + 1) > WrapDPsize){
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
@@ -112,8 +95,20 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         
         wrap_around_DP(rep_unit_string,
                        actual_rep_period,
-                       &orgInputString[query_start],
-                       (query_end - query_start + 1),
+                       query_start,
+                       query_end,
+                       &actual_start,       &actual_end,
+                       &actual_repeat_len,  &Num_freq_unit,
+                       &Num_matches,        &Num_mismatches,
+                       &Num_insertions,     &Num_deletions);
+        
+        int tmp_query_start = actual_start;
+        int tmp_query_end   = actual_end;
+        
+        wrap_around_DP(rep_unit_string,
+                       actual_rep_period,
+                       tmp_query_start,
+                       tmp_query_end,
                        &actual_start,       &actual_end,
                        &actual_repeat_len,  &Num_freq_unit,
                        &Num_matches,        &Num_mismatches,
@@ -121,10 +116,9 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         
         strcpy( rr->readID, readID);
         rr->inputLen           = inputLen;
-        rr->rep_start          = query_start + actual_start;
-        rr->rep_end            = query_start + actual_end;
+        rr->rep_start          = actual_start;
+        rr->rep_end            = actual_end;
         rr->repeat_len         = actual_repeat_len;
-        //rr->predicted_rep_period = predicted_rep_period;
         rr->rep_period         = actual_rep_period;
         rr->Kmer               = k;
         rr->Num_freq_unit      = 0;
@@ -179,8 +173,10 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     
     // A heuristic rule for setting the k-mer range for a de Bruijn graph to an nearly optimal one
     int min_k, max_k;
-    if(w < 100){                // 3 - 6
-        min_k = minKmer - 2;
+    // #define minKmer 5
+    // #define maxKmer 11
+    if(w < 100){                // 2 - 6
+        min_k = minKmer - 3;
         max_k = maxKmer - 5;
     }else if(w < 1000){         // 5 - 9
         min_k = minKmer;
@@ -240,8 +236,7 @@ void remove_redundant_ranges_from_directional_index(int query_start, int query_e
     }
 }
 
-
-void handle_one_TR(char *readID, int inputLen, int print_multiple_TR){
+void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_alignment){
     //
     // Locate overlapping regions of tandem repeats
     //
@@ -256,8 +251,6 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR){
     int DI_array_length = inputLen + random_string_length*2;
     
     fill_directional_index_with_end(DI_array_length, inputLen, random_string_length);
-
-
 
 #ifdef DEBUG_finding_ranges
     fprintf(stderr, "before removing non proper ranges --------------\n");
@@ -302,9 +295,9 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR){
     struct timeval s_time_chaining, e_time_chaining;
     gettimeofday(&s_time_chaining, NULL);
     if(print_multiple_TR)
-        chaining();
+        chaining(print_alignment);
     else
-        search_max();
+        search_max(print_alignment);
     gettimeofday(&e_time_chaining, NULL);
     time_chaining += (e_time_chaining.tv_sec - s_time_chaining.tv_sec) + (e_time_chaining.tv_usec - s_time_chaining.tv_usec)*1.0E-6;
 
@@ -327,9 +320,9 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR){
     
 }
 
-void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR)
+void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment)
 {
-    handle_one_TR(readID, inputLen, print_multiple_TR);
+    handle_one_TR(readID, inputLen, print_multiple_TR, print_alignment);
 }
 
 

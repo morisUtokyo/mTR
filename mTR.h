@@ -12,6 +12,7 @@
 #define MIN_PERIOD 2            // Minimum period length
 #define MAX_PERIOD 500          // Maximum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
+#define ALIGNMENT_WIDTH_PRINTING 50
 
 
 // The following values are optimzed for a benchmark dataset.
@@ -20,14 +21,14 @@
 #define MIN_MAX_DI 0.5  // For filtering out reads with less meaningful tandem repeats
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
-#define BLK 1024        // Block size of input buffer.
+#define BLK 4096        // Block size of input buffer.
 #define WrapDPsize  200000000    // 200M  = repeat_unit_size (200) x length_of_repeats (1,000,000)
 
 
 // Parameters for global and wrap around alignment
-#define MATCH_GAIN  1
-#define MISMATCH_PENALTY -1
-#define INDEL_PENALTY -3        // -3 or larger values are ineffective in removing insertion errors
+#define MATCH_GAIN   1
+#define MISMATCH_PENALTY  1 //1
+#define INDEL_PENALTY  3 //3
 
 //  Choice of DeBruijn graph or progressive multiple alignment
 #define ProgressiveMultipleAlignment 0
@@ -53,6 +54,10 @@ double *freq_interval_len;       // For computing frequency distribution of inte
 int *count_period_all;  // Frequency of individual periods of size 1 to MAX_PERIOD.
 int *rep_unit_string;   // String of representative unit of the focal repeat. The length is MAX_PERIOD.
 int *WrapDP;            // 2D space for Wrap-around global alignment DP for handling tandem repeats
+char *alignment_input;
+char *alignment_symbols;
+char *alignment_repeats;
+// For printing the alignment of the predicted repeat unit with the input string
                         // The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 int **consensus, **gaps;  // Space for consensus
 
@@ -84,12 +89,13 @@ repeat_in_read *RRs;
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-int handle_one_file(char *inputFile, int print_multiple_TR);
-void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR);
+int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment);
+void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment);
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
 int search_De_Bruijn_graph(int max_start, int max_end, int inputLen, int k);
 void wrap_around_DP(
-   int *rep_unit, int unit_len, int *rep, int rep_len,
+   int *rep_unit, int unit_len,
+   int query_start, int query_end,
    int *actual_start,   int *actual_end,
    int *return_rep_len, int *return_freq_unit,
    int *return_matches, int *return_mismatches,
@@ -97,6 +103,7 @@ void wrap_around_DP(
 int progressive_multiple_alignment(
     int max_start, int max_end, int max_pos,
     int rep_period, int Kmer, int inputLen, int pow4k);
+void pretty_print_alignment(int *rep_unit, int unit_len, int rep_start, int rep_end);
 
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
@@ -104,7 +111,7 @@ void print_one_repeat_in_read(repeat_in_read rr);
 float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_search_De_Bruijn_graph, time_count_table, time_chaining;
 
 // For debugging with #ifdef
-#define LOCAL_ALIGNMENT
+// #define LOCAL_ALIGNMENT
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
@@ -114,5 +121,4 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 
 //#define DEBUG_finding_ranges
 //#define PRINT_COMP_TIME
-
 
