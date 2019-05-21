@@ -102,18 +102,6 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
                        &Num_matches,        &Num_mismatches,
                        &Num_insertions,     &Num_deletions);
         
-        int tmp_query_start = actual_start;
-        int tmp_query_end   = actual_end;
-        
-        wrap_around_DP(rep_unit_string,
-                       actual_rep_period,
-                       tmp_query_start,
-                       tmp_query_end,
-                       &actual_start,       &actual_end,
-                       &actual_repeat_len,  &Num_freq_unit,
-                       &Num_matches,        &Num_mismatches,
-                       &Num_insertions,     &Num_deletions);
-        
         strcpy( rr->readID, readID);
         rr->inputLen           = inputLen;
         rr->rep_start          = actual_start;
@@ -130,6 +118,7 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         rr->Num_deletions      = Num_deletions;
         
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
+        
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
     }
 }

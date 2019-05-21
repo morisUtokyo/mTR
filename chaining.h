@@ -18,6 +18,6 @@ extern "C" {
     void chaining(int print_alignment);
     void search_max(int print_alignment);
     void delete_set_of_alignments();
-    extern void pretty_print_alignment(int *rep_unit, int unit_len, int rep_start, int rep_end);
+    extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end);
 }
 #endif

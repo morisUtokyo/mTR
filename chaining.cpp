@@ -91,21 +91,8 @@ public:
                );
         
         if(print_alignment == 1){
-            int rep_unit[MAX_PERIOD];
-            int intBase;
-            for(int i=0; i<rep_period; i++){   // 1-origin index
-                switch(string[i]){
-                    case 'A': intBase = 0; break;
-                    case 'C': intBase = 1; break;
-                    case 'G': intBase = 2; break;
-                    case 'T': intBase = 3; break;
-                    default: fprintf(stderr, "fatal input char %c\n", string[i]);
-                }
-                rep_unit[i] = intBase;
-            }
-            rep_unit[rep_period] = rep_unit[0];
             printf("\n");
-            pretty_print_alignment(rep_unit, rep_period, rep_start, rep_end);
+            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end);
         }
         
         fflush(stdout);
@@ -230,6 +217,7 @@ void chaining(int print_alignment){
         if(tmpX_alignment->isStart(iter->first)){
 #ifdef DEBUG_chaining
             // Pair of an alignment and its start position
+            /*
             cout << "\nS " << iter->first << "\t";
             tmpX_alignment->print_one_TR(print_alignment);
             
@@ -243,6 +231,7 @@ void chaining(int print_alignment){
                     tmpY->second->print_one_TR(print_alignment);
                 }
             }
+             */
 #endif
             if(!sorted_by_Y.empty()){
                 // Search for a position such that tmpY->end_y <= tmpX_alignment->end_y
@@ -254,7 +243,7 @@ void chaining(int print_alignment){
                     {
                         tmpX_alignment->set_predecessor(prevY->second);
 #ifdef DEBUG_chaining
-                        cout << "Set predececcor\t"; tmpX_alignment->print_one_TR(print_alignment);
+                     //   cout << "Set predececcor\t"; tmpX_alignment->print_one_TR(print_alignment);
 #endif
                         break;
                     }
@@ -264,15 +253,17 @@ void chaining(int print_alignment){
                 {
                     tmpX_alignment->set_predecessor(prevY->second);
 #ifdef DEBUG_chaining
-                    cout << "Set predececcor\t"; tmpX_alignment->print_one_TR(print_alignment);
+                    // cout << "Set predececcor\t"; tmpX_alignment->print_one_TR(print_alignment);
 #endif
                 }
             }
         }else{
 #ifdef DEBUG_chaining
             // Pair of an alignment and its end position
+            /*
             cout << "\nE " << iter->first << "\t";
             tmpX_alignment->print_one_TR(print_alignment);
+             */
 #endif
             
             if(sorted_by_Y.empty()){
@@ -289,6 +280,9 @@ void chaining(int print_alignment){
                        tmpY->second->score > tmpX_alignment->score)
                     {   // A better alignment was found.
                         flag = false;
+                    }
+                    if(tmpY->second->end_y > tmpX_alignment->end_y){
+                        break;
                     }
                 }
                 if(flag){
@@ -314,6 +308,7 @@ void chaining(int print_alignment){
                 }
             }
 #ifdef DEBUG_chaining
+            /*
             cout << "tmpY";
             if(sorted_by_Y.empty()){
                 cout << " is empty\n";
@@ -324,6 +319,7 @@ void chaining(int print_alignment){
                     tmpY->second->print_one_TR(print_alignment);
                 }
             }
+             */
 #endif
         }
     }
