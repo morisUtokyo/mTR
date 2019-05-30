@@ -27,8 +27,8 @@
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN   1
-#define MISMATCH_PENALTY  1 //1
-#define INDEL_PENALTY  3 //3
+#define MISMATCH_PENALTY  1
+#define INDEL_PENALTY  3
 
 //  Choice of DeBruijn graph or progressive multiple alignment
 #define ProgressiveMultipleAlignment 0
@@ -103,8 +103,9 @@ void wrap_around_DP(
 int progressive_multiple_alignment(
     int max_start, int max_end, int max_pos,
     int rep_period, int Kmer, int inputLen, int pow4k);
-void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end);
 
+void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b);
+void clear_rr(repeat_in_read *rr_a);
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
 

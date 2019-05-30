@@ -215,24 +215,6 @@ void chaining(int print_alignment){
         multimap<int, Alignment*>::iterator tmpY, prevY;
         
         if(tmpX_alignment->isStart(iter->first)){
-#ifdef DEBUG_chaining
-            // Pair of an alignment and its start position
-            /*
-            cout << "\nS " << iter->first << "\t";
-            tmpX_alignment->print_one_TR(print_alignment);
-            
-            cout << "tmpY";
-            if(sorted_by_Y.empty()){
-                cout << " is empty\n";
-            }else{
-                cout << " has\n";
-                for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++){
-                    cout << tmpY->first << "\t";
-                    tmpY->second->print_one_TR(print_alignment);
-                }
-            }
-             */
-#endif
             if(!sorted_by_Y.empty()){
                 // Search for a position such that tmpY->end_y <= tmpX_alignment->end_y
                 for(tmpY = sorted_by_Y.begin(), prevY = tmpY;
@@ -258,13 +240,6 @@ void chaining(int print_alignment){
                 }
             }
         }else{
-#ifdef DEBUG_chaining
-            // Pair of an alignment and its end position
-            /*
-            cout << "\nE " << iter->first << "\t";
-            tmpX_alignment->print_one_TR(print_alignment);
-             */
-#endif
             
             if(sorted_by_Y.empty()){
                 sorted_by_Y.insert(make_pair(tmpX_alignment->end_y, tmpX_alignment));
@@ -307,20 +282,6 @@ void chaining(int print_alignment){
                     }
                 }
             }
-#ifdef DEBUG_chaining
-            /*
-            cout << "tmpY";
-            if(sorted_by_Y.empty()){
-                cout << " is empty\n";
-            }else{
-                cout << " has\n";
-                for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++){
-                    cout << tmpY->first << "\t";
-                    tmpY->second->print_one_TR(print_alignment);
-                }
-            }
-             */
-#endif
         }
     }
     

@@ -33,6 +33,25 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->ConsensusMethod     = -1;
 }
 
+void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
+    rr_a->ID                = rr_b->ID;
+    strcpy( rr_a->readID, rr_b->readID);
+    rr_a->inputLen          = rr_b->inputLen;
+    rr_a->rep_start         = rr_b->rep_start;
+    rr_a->rep_end           = rr_b->rep_end;
+    rr_a->repeat_len        = rr_b->repeat_len;
+    rr_a->rep_period        = rr_b->rep_period;
+    strcpy( rr_a->string, rr_b->string);
+    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = rr_b->freq_2mer[i]; }
+    rr_a->Num_freq_unit     = rr_b->Num_freq_unit;
+    rr_a->Num_matches       = rr_b->Num_matches;
+    rr_a->Num_mismatches    = rr_b->Num_mismatches;
+    rr_a->Num_insertions    = rr_b->Num_insertions;
+    rr_a->Num_deletions     = rr_b->Num_deletions;
+    rr_a->Kmer              = rr_b->Kmer;
+    rr_a->ConsensusMethod   = rr_b->ConsensusMethod;
+}
+
 double DI_index(int *vector0, int *vector1, int *vector2, int k){
     double s_0 = 0;
     double s_1 = 0;

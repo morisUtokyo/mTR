@@ -188,10 +188,12 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
            MIN_PERIOD <= rr->rep_period )
         {
             max_matches = rr->Num_matches;
-            *tmp_rr = *rr;
+            assign_rr(tmp_rr, rr);
+            //*tmp_rr = *rr;
         }
     }
-    *rr = *tmp_rr;
+    assign_rr(rr, tmp_rr);
+    //*rr = *tmp_rr;
 }
 
 void insert_an_alignment(repeat_in_read rr){
@@ -267,6 +269,7 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
         if( MIN_MAX_DI < directional_index[query_start] ){
             if(-1 < query_end){
                 // Move onto de Bruijn graph construction
+                clear_rr(&RRs[0]); clear_rr(&RRs[1]);
                 find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
                 // Examine if a qualified TR is found
                 if( RRs[0].repeat_len > 0 &&
