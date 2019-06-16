@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
 {
     char *inputFile;
     int print_multiple_TR = 1;
+    MIN_MAX_DI = 0;
     int print_alignment   = 0;
 
     if(argc == 2){
@@ -32,7 +33,8 @@ int main(int argc, char *argv[])
         if(*p == '-' ){
             for(p++; *p != '\0'; p++){
                 switch(*p){
-                    case 's':   print_multiple_TR = 0;  break;
+                    case 's':   print_multiple_TR = 0;
+                                MIN_MAX_DI = 0.5;       break;
                     case 'm':   print_multiple_TR = 1;  break;
                     case 'p':   print_alignment   = 1;  break;
                 }

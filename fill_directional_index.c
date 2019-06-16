@@ -338,9 +338,9 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         fill_directional_index_tmp( DI_array_length, w, k, inputLen, random_string_length);
         put_local_maximum_into_directional_index( DI_array_length, w );
     }
-    
+
     // For finding longer tandem repeats
-    k = 5; 
+    k = 5;
     init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
         // Put random sequences of the input length before and after the input string
     for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; )
@@ -358,7 +358,7 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
             w += 10000;
         }
     }
-    
+
     //  By removing random sequences of both ends, retain directional indexes of the input
     for(int i=0; i<inputLen; i++){
         int shifted_i = i + random_string_length;

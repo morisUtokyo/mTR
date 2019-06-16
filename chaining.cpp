@@ -8,6 +8,10 @@
 using namespace std;
 //#define DEBUG_chaining
 
+#define MH_distance_threshold 0.3  // Two 2mer frequency distributions are identical if their Manhattan distance is less than or equal to this threshold.  A small threshold generates smaller groups of repeat units.
+#define MIN_REP_LEN_CONCATENATE 100
+#define MIN_DISTANCE_CONCATENATE 2000
+
 class Alignment{
 public:
 	int start_x, start_y, end_x, end_y;
@@ -125,6 +129,120 @@ public:
 		predecessor = a;
 		score += a->score;
 	}
+    
+    int char2int(char c){
+        switch(c){
+            case 'A': return(0);
+            case 'C': return(1);
+            case 'G': return(2);
+            case 'T': return(3);
+            default: fprintf(stderr, "fatal input char %c", c);
+        }
+    }
+    
+    void freq_2mer_array(char* st, int *freq_2mer){
+        //void freq_2mer_array(char* st, int len, int *freq_2mer){
+        for(int i=0; i<16; i++){
+            freq_2mer[i] = 0;
+        }
+        int len;
+        for(len = 0; st[len] != '\0'; len++);
+        int index;
+        for(int i=1; i<len; i++){
+            index = char2int(st[i-1]) * 4 + char2int(st[i]);
+            freq_2mer[index]++;
+        }
+        // wrap around and concatenate the last and first characters
+        index = char2int(st[len-1]) * 4 + char2int(st[0]);
+        freq_2mer[index]++;
+    }
+    
+    int TRs_in_neighborhood(char* a_string, char* query_string){
+        //int TRs_in_neighborhood(int *a_freq_2mer, int *query_freq_2mer){
+        // return +1 if they are in neighborhood, and -1 otherwise
+        
+        int a_freq_2mer[16];
+        int query_freq_2mer[16];
+        freq_2mer_array(a_string,       a_freq_2mer);
+        freq_2mer_array(query_string,   query_freq_2mer);
+        
+        int diff = 0;
+        int query_unit_len = 0;
+        for(int i=0; i<16; i++){
+            int tmp_diff =  a_freq_2mer[i] - query_freq_2mer[i];
+            if(tmp_diff < 0){ tmp_diff = (-1) * tmp_diff; }
+            diff += tmp_diff;
+            query_unit_len += query_freq_2mer[i];
+        }
+        // We here set the threshold to a temporary value, but it should be revised.
+        query_unit_len++;
+        if( diff < MH_distance_threshold * query_unit_len )
+            return(1);
+        else
+            return(-1);
+    }
+    
+    Alignment* extend_alignment(int focal_start, char* focal_string){
+        
+        if(focal_start - rep_end < MIN_DISTANCE_CONCATENATE){ // Within the distance of 1000bp
+            if(TRs_in_neighborhood(string, focal_string) == 1){
+                // Strings are similar.
+                if(predecessor != NULL){
+                    Alignment* answer = predecessor->extend_alignment(rep_start, focal_string);
+                    // Start from this alignment.
+                    if(answer == NULL){     // No maximum alignment ahead, and answer this.
+                        return this;
+                    }else{                  // Anoswer the maximum alignment ahread.
+                        return answer;
+                    }
+                }else{
+                    return this;
+                }
+            }else{
+                if(predecessor != NULL){
+                    return predecessor->extend_alignment(focal_start, focal_string);
+                }else{
+                    return NULL;
+                }
+            }
+        }else{
+            return NULL;
+        }
+    }
+    
+    void concatenate_similar_alignments(){
+        if(repeat_len > MIN_REP_LEN_CONCATENATE){  // qualified
+            if(predecessor != NULL){
+                Alignment* maximimal = predecessor->extend_alignment(rep_start, string);
+                if(maximimal != NULL)
+                {
+                    //fprintf(stderr, "Pair of alignments-------------------\n");
+                    //print_one_TR(0);
+                    //maximimal->print_one_TR(0);
+                    
+                    int a_rep_unit[MAX_PERIOD];
+                    for(int i=0; i<rep_period; i++){ a_rep_unit[i] = char2int(string[i]); }
+                    wrap_around_DP(a_rep_unit, rep_period,
+                                   maximimal->rep_start, rep_end,
+                                   &rep_start, &rep_end, &repeat_len, &Num_freq_unit,
+                                   &Num_matches, &Num_mismatches, &Num_insertions, &Num_deletions);
+                    predecessor = maximimal->predecessor;
+                    //print_one_TR(0);
+                    
+                    // Search for another possible concatenation
+                    if(maximimal->predecessor != NULL){
+                        maximimal->predecessor->concatenate_similar_alignments();
+                    }
+                }else{
+                    predecessor->concatenate_similar_alignments();
+                }
+            }
+        }else{
+            if(predecessor != NULL){
+                predecessor->concatenate_similar_alignments();
+            }
+        }
+    }
 };
 
 set<Alignment*> set_of_alignments;
@@ -286,11 +404,14 @@ void chaining(int print_alignment){
     }
     
     // Print the maximum chain
+    // Concatenate fragmented alignmnets of an identical tandem repeat
+    (sorted_by_Y.rbegin())->second->concatenate_similar_alignments();
+    
 #ifdef DEBUG_chaining
     (sorted_by_Y.rbegin())->second->print_chain();
 #endif
     (sorted_by_Y.rbegin())->second->print_all_TRs(print_alignment);
-    
+
     // delete all
     for(set<Alignment*>::iterator iter = set_of_alignments.begin();
         iter != set_of_alignments.end(); iter++){

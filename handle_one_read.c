@@ -242,20 +242,6 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     int DI_array_length = inputLen + random_string_length*2;
     
     fill_directional_index_with_end(DI_array_length, inputLen, random_string_length);
-
-#ifdef DEBUG_finding_ranges
-    fprintf(stderr, "before removing non proper ranges --------------\n");
-    for(int i=0; i<inputLen; i++){
-        if(MIN_MAX_DI < directional_index[i] ){
-            fprintf(stderr, "%i\t%i\t%i\t%i\t%f\n",
-                    i,
-                    directional_index_end[i],
-                    (directional_index_end[i]- i),
-                    directional_index_w[i],
-                    directional_index[i]);
-        }
-    }
-#endif
     
     //
     // Search for positions with tandem repeats
@@ -298,19 +284,6 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     gettimeofday(&e_time, NULL);
     time_period += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
     
-#ifdef DEBUG_finding_ranges
-    fprintf(stderr, "after removing non proper ranges --------------\n");
-    for(int i=0; i<inputLen; i++){
-        if(MIN_MAX_DI < directional_index[i] ){
-            fprintf(stderr, "%i\t%i\t%i\t%i\t%f\n",
-                    i,
-                    directional_index_end[i],
-                    (directional_index_end[i]- i),
-                    directional_index_w[i],
-                    directional_index[i]);
-        }
-    }
-#endif
     
 }
 

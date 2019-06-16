@@ -16,9 +16,9 @@
 
 
 // The following values are optimzed for a benchmark dataset.
-#define MIN_WINDOW 20   // Window size parameters for locating the boundaries of tandem repeats
+#define MIN_WINDOW 20  // Window size parameters for locating the boundaries of tandem repeats
 #define MAX_WINDOW 20000
-#define MIN_MAX_DI 0.5  // For filtering out reads with less meaningful tandem repeats
+
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
 #define BLK 4096        // Block size of input buffer.
@@ -41,6 +41,9 @@ int *inputString;       // 4 decimal encoding of the input read string of length
 int *inputString_w_rand; // 4 decimal encoding of the input read string of length MAX_INPUT_LENGTH.
 int *count;             // A table of size 4^k for counting sort.
 int *sortedString;      // Positions of 4-mers sorted wrt both 4-mers and their positions.
+
+int MIN_MAX_DI;         // For filtering out reads with less meaningful tandem repeats
+                        // 0.5 for the single mode, 0 for the multiple mode
 
 double *directional_index_tmp;  // For storing all DI values temporarily for a given w
 double *directional_index;      // For storing a locally maximum DI
@@ -112,7 +115,7 @@ void print_one_repeat_in_read(repeat_in_read rr);
 float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_search_De_Bruijn_graph, time_count_table, time_chaining;
 
 // For debugging with #ifdef
-// #define LOCAL_ALIGNMENT
+#define LOCAL_ALIGNMENT
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
