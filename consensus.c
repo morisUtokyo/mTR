@@ -55,7 +55,7 @@ int max_position(int query_start, int query_end, int inputLen, int k)
 }
 
 
-int search_De_Bruijn_graph( int query_start, int query_end, int inputLen, int k ){
+int search_De_Bruijn_graph( int* rep_unit_string, int query_start, int query_end, int inputLen, int k ){
     
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     
@@ -112,6 +112,7 @@ int search_De_Bruijn_graph( int query_start, int query_end, int inputLen, int k 
     return(actual_rep_period);
 }
 
+/*
 int progressive_multiple_alignment(
             int query_start, int query_end, int max_pos,
             int rep_period, int Kmer, int inputLen, int pow4k){
@@ -266,4 +267,4 @@ int progressive_multiple_alignment(
     
     return(rep_period);
 }
-
+*/

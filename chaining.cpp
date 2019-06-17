@@ -221,9 +221,17 @@ public:
                     //maximimal->print_one_TR(0);
                     
                     int a_rep_unit[MAX_PERIOD];
+                    int actual_rep_period = rep_period;
+                    int query_start = maximimal->rep_start;
+                    int query_end   = rep_end;
+                    
                     for(int i=0; i<rep_period; i++){ a_rep_unit[i] = char2int(string[i]); }
-                    wrap_around_DP(a_rep_unit, rep_period,
-                                   maximimal->rep_start, rep_end,
+                    
+                    //init_inputString(Kmer, query_start, query_end, inputLen);
+                    //actual_rep_period = search_De_Bruijn_graph(a_rep_unit, query_start, query_end, inputLen, Kmer);
+                    
+                    wrap_around_DP(a_rep_unit, actual_rep_period,
+                                   query_start, query_end,
                                    &rep_start, &rep_end, &repeat_len, &Num_freq_unit,
                                    &Num_matches, &Num_mismatches, &Num_insertions, &Num_deletions);
                     predecessor = maximimal->predecessor;

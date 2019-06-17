@@ -26,5 +26,9 @@ extern "C" {
                                int *return_rep_len, int *return_freq_unit,
                                int *return_matches, int *return_mismatches,
                                int *return_insertions, int *return_deletions);
+    extern int search_De_Bruijn_graph(
+                        int* rep_unit_string, int query_start, int query_end,
+                        int inputLen, int k );
+    extern void init_inputString(int k, int query_start, int query_end, int inputLen);
 }
 #endif

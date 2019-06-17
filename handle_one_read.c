@@ -73,8 +73,8 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
     //---------------------------------------------------------------------------
     
-    //int actual_rep_period = search_De_Bruijn_graph(query_start, query_end, k, inputLen, pow4[k-1] );
-    int actual_rep_period = search_De_Bruijn_graph(query_start, query_end, inputLen, k);
+    int rep_unit_string[MAX_PERIOD];
+    int actual_rep_period = search_De_Bruijn_graph(rep_unit_string, query_start, query_end, inputLen, k);
     
     if(actual_rep_period < MIN_PERIOD){
         return;
@@ -189,11 +189,9 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         {
             max_matches = rr->Num_matches;
             assign_rr(tmp_rr, rr);
-            //*tmp_rr = *rr;
         }
     }
     assign_rr(rr, tmp_rr);
-    //*rr = *tmp_rr;
 }
 
 void insert_an_alignment(repeat_in_read rr){

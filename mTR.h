@@ -55,7 +55,7 @@ double *freq_interval_len;       // For computing frequency distribution of inte
                        // The length is MAX_INPUT_LENGTH
 
 int *count_period_all;  // Frequency of individual periods of size 1 to MAX_PERIOD.
-int *rep_unit_string;   // String of representative unit of the focal repeat. The length is MAX_PERIOD.
+//int *rep_unit_string;   // String of representative unit of the focal repeat. The length is MAX_PERIOD.
 int *WrapDP;            // 2D space for Wrap-around global alignment DP for handling tandem repeats
 char *alignment_input;
 char *alignment_symbols;
@@ -95,7 +95,7 @@ repeat_in_read *RRs;
 int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment);
 void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment);
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
-int search_De_Bruijn_graph(int max_start, int max_end, int inputLen, int k);
+int search_De_Bruijn_graph( int* rep_unit_string, int query_start, int query_end, int inputLen, int k );
 void wrap_around_DP(
    int *rep_unit, int unit_len,
    int query_start, int query_end,
