@@ -1,6 +1,31 @@
-//
-//  Consensus.c
-//
+/*
+ Copyright (c) 2019, Shinichi Morishita
+ All rights reserved.
+ 
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 
+ 1. Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ The views and conclusions contained in the software and documentation are those
+ of the authors and should not be interpreted as representing official policies,
+ either expressed or implied, of the FreeBSD Project.
+ */
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -55,7 +80,7 @@ int max_position(int query_start, int query_end, int inputLen, int k)
 }
 
 
-int search_De_Bruijn_graph( int* rep_unit_string, int query_start, int query_end, int inputLen, int k ){
+int search_De_Bruijn_graph( int* a_rep_unit_string, int query_start, int query_end, int inputLen, int k ){
     
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     
@@ -71,13 +96,13 @@ int search_De_Bruijn_graph( int* rep_unit_string, int query_start, int query_end
     
     // Initialization
     for(int i = 0; i < MAX_PERIOD; i++){
-        rep_unit_string[i] = 0;
+        a_rep_unit_string[i] = 0;
     }
     int actual_rep_period = 0;
     int pow4k_1 = pow4[k-1];
     // de Bruijn graph search
     for(int k=0; k< MAX_PERIOD; k++){
-        rep_unit_string[k] = Node / pow4k_1;
+        a_rep_unit_string[k] = Node / pow4k_1;
         
         int max_lsd = 0;
         int max_count_lsd = 0;

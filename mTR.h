@@ -1,10 +1,31 @@
-//
-//  mTR.h
-//  
-//
-//  Created by Shinichi Morishita
-//
-//
+/*
+ Copyright (c) 2019, Shinichi Morishita
+ All rights reserved.
+ 
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 
+ 1. Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ The views and conclusions contained in the software and documentation are those
+ of the authors and should not be interpreted as representing official policies,
+ either expressed or implied, of the FreeBSD Project.
+ */
 
 // Key default parameters
 #define MAX_INPUT_LENGTH 1000000 // The maximum length of each read
@@ -42,8 +63,9 @@ int *inputString_w_rand; // 4 decimal encoding of the input read string of lengt
 int *count;             // A table of size 4^k for counting sort.
 int *sortedString;      // Positions of 4-mers sorted wrt both 4-mers and their positions.
 
-int MIN_MAX_DI;         // For filtering out reads with less meaningful tandem repeats
+double MIN_MAX_DI;      // For filtering out reads with less meaningful tandem repeats
                         // 0.5 for the single mode, 0 for the multiple mode
+#define MIN_MAX_DI_SINGLE 0.5
 
 double *directional_index_tmp;  // For storing all DI values temporarily for a given w
 double *directional_index;      // For storing a locally maximum DI
@@ -113,6 +135,7 @@ void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
 
 float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_search_De_Bruijn_graph, time_count_table, time_chaining;
+int query_counter;
 
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
@@ -125,5 +148,6 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 //#define DEBUG_chaining
 
 //#define DEBUG_finding_ranges
+//#define DEBUG_NUM_QUERIES
 //#define PRINT_COMP_TIME
 

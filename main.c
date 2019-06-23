@@ -1,7 +1,31 @@
-//---------------------------------------------------------------------
-// Finding tandem repeats in long noizy reads
-// Initial codes are developed by Shinichi Morishita and ....
-//---------------------------------------------------------------------
+/*
+ Copyright (c) 2019, Shinichi Morishita
+ All rights reserved.
+ 
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 
+ 1. Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ The views and conclusions contained in the software and documentation are those
+ of the authors and should not be interpreted as representing official policies,
+ either expressed or implied, of the FreeBSD Project.
+ */
 
 //#include <sys/time.h>
 #include <sys/time.h>
@@ -22,7 +46,6 @@ int main(int argc, char *argv[])
 {
     char *inputFile;
     int print_multiple_TR = 1;
-    MIN_MAX_DI = 0;
     int print_alignment   = 0;
 
     if(argc == 2){
@@ -34,9 +57,12 @@ int main(int argc, char *argv[])
             for(p++; *p != '\0'; p++){
                 switch(*p){
                     case 's':   print_multiple_TR = 0;
-                                MIN_MAX_DI = 0.5;       break;
+                                MIN_MAX_DI = MIN_MAX_DI_SINGLE;   // setting 0 does not improve the accuracy
+                                break;
                     case 'm':   print_multiple_TR = 1;  break;
+                                MIN_MAX_DI = 0;
                     case 'p':   print_alignment   = 1;  break;
+                    default:    MIN_MAX_DI = 0; // multiple mode
                 }
             }
         }
@@ -50,6 +76,7 @@ int main(int argc, char *argv[])
     time_initialize_input_string = 0;
     time_count_table = 0; time_search_De_Bruijn_graph = 0;
     time_wrap_around_DP = 0; time_chaining = 0;
+    query_counter = 0;
     
     
     struct timeval s, e;
@@ -75,6 +102,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
     fprintf(stderr, "\t%f\tchaining\n",   time_chaining);
+    fprintf(stderr, "\t%i\tCount of queries\n", query_counter);
 #endif
 
     

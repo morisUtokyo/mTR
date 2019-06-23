@@ -1,9 +1,31 @@
-//
-//  handle_one_read.c
-//  
-//
-//  Created by Shinichi Morishita
-//
+/*
+ Copyright (c) 2019, Shinichi Morishita
+ All rights reserved.
+ 
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 
+ 1. Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ The views and conclusions contained in the software and documentation are those
+ of the authors and should not be interpreted as representing official policies,
+ either expressed or implied, of the FreeBSD Project.
+ */
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -229,8 +251,6 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     //
     // Locate overlapping regions of tandem repeats
     //
-    
-    
     int random_string_length;
     if(inputLen < MAX_WINDOW * 2){
         random_string_length = inputLen;
@@ -249,33 +269,35 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     
     for(int query_start=0; query_start < inputLen; query_start++){
         int query_end = directional_index_end[query_start];
-        if(query_end < inputLen){
-            int width     = directional_index_w[query_start];
+        if(-1 < query_end && query_end < inputLen)
+        {
             if( MIN_MAX_DI < directional_index[query_start] ){
-                if(-1 < query_end){
-                    // Move onto de Bruijn graph construction
-                    clear_rr(&RRs[0]); clear_rr(&RRs[1]);
-                    find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
-                    // Examine if a qualified TR is found
-                    if( RRs[0].repeat_len > 0 &&
-                       RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
-                    {
-#ifdef DEBUG_finding_ranges
-                        fprintf(stderr, "Change from %i-%i to %i-%i\n", query_start, query_end, RRs[0].rep_start, RRs[0].rep_end);
+                // Move onto de Bruijn graph construction
+                clear_rr(&RRs[0]); clear_rr(&RRs[1]);
+                int width     = directional_index_w[query_start];
+                find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
+                query_counter++;
+#ifdef DEBUG_NUM_QUERIES
+                fprintf(stderr, "%i\t%i\t%i\t%f\n", query_start, query_end, width, directional_index[query_start]);
 #endif
-                        insert_an_alignment(RRs[0]);
-                        remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
-                    }
+                // Examine if a qualified TR is found
+                if( RRs[0].repeat_len > 0 &&
+                   RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
+                {
+                    insert_an_alignment(RRs[0]);
+                    remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
                 }
             }
         }
     }
     struct timeval s_time_chaining, e_time_chaining;
     gettimeofday(&s_time_chaining, NULL);
+    
     if(print_multiple_TR)
         chaining(print_alignment);
     else
         search_max(print_alignment);
+    
     gettimeofday(&e_time_chaining, NULL);
     time_chaining += (e_time_chaining.tv_sec - s_time_chaining.tv_sec) + (e_time_chaining.tv_usec - s_time_chaining.tv_usec)*1.0E-6;
 
