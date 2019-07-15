@@ -167,9 +167,9 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         vector2[ inputString_w_rand[i + w*2] ]++;
     }
     // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-    // Compute the initial values for s(sum), q(squared sum), and ip(inner product)
-    double s_0, s_1, s_2, q_0, q_1, q_2, ip_01, ip_12;
-    s_0 = 0; s_1 = 0; s_2 = 0; q_0 = 0; q_1 = 0; q_2 = 0; ip_01 = 0; ip_12 = 0;
+    // Compute the initial values for s(sum), q(squared sum), ip(inner product), and d(Manhattan distance)
+    double s_0, s_1, s_2, q_0, q_1, q_2, ip_01, ip_12, d_01, d_12;
+    s_0 = 0; s_1 = 0; s_2 = 0; q_0 = 0; q_1 = 0; q_2 = 0; ip_01 = 0; ip_12 = 0; d_01 = 0; d_12 = 0;
     for(int i=0; i<pow4[k]; i++){
         s_0    += vector0[i];
         s_1    += vector1[i];
@@ -179,6 +179,8 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         q_2    += vector2[i] * vector2[i];
         ip_01  += vector0[i] * vector1[i];
         ip_12  += vector1[i] * vector2[i];
+        d_01   += DIFF( vector0[i], vector1[i] );
+        d_12   += DIFF( vector1[i], vector2[i] );
     }
     // Shift vector0/1/2 starting from i=1 can calculate directional indexes
     for(int i=0; i < (DI_array_length - w - random_string_length - k + 1); i++){
@@ -202,7 +204,15 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         }else{
             P_12 = 0;
         }
-        double DI =  P_12 - P_01;
+        double DI;
+#ifdef Manhattan_Distance
+        DI = (1 - d_12/s_1) - (1 - d_01/s_0);
+        // d_01 and d_12 are the Manhattan distances, s_0 and s_1 are the sums of vector elements,
+        // d_12/s_1 and d_01/s_0 are the mismatch ratios between the two vectors, and
+        // 1 - d_12/s_1 and 1 - d_01/s_0 are the match ratios.
+#else
+        DI =  P_12 - P_01;
+#endif
         // Note that DI is computed for position i+w (NOT i !!)
         directional_index_tmp[i+w] = DI;
         
@@ -228,23 +238,26 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         // vector0, decrement
         q_0   -= pow(vector0[ dec_i_v0 ], 2);
         ip_01 -= vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
+        d_01  -= DIFF( vector0[ dec_i_v0 ], vector1[ dec_i_v0 ] );
         // vector0, increment
         if(inc_i_v0 != dec_i_v0){
             q_0   -= pow(vector0[ inc_i_v0 ], 2);
             ip_01 -= vector0[ inc_i_v0 ] * vector1[ inc_i_v0 ];
+            d_01  -= DIFF( vector0[ inc_i_v0 ], vector1[ inc_i_v0 ] );
         }
         // vector1, decrement
         q_1   -= pow(vector1[ dec_i_v1 ], 2);
-        // ip_01 -= vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
-        // duplicated as inc_i_v0 = dec_i_v1
         ip_12 -= vector1[ dec_i_v1 ] * vector2[ dec_i_v1 ];
+        d_12  -= DIFF( vector1[ dec_i_v1 ], vector2[ dec_i_v1 ] );
         // vector 1, increment
         if(inc_i_v1 != dec_i_v1){
             q_1   -= pow(vector1[ inc_i_v1 ], 2);
             if(inc_i_v1 != dec_i_v0){
                 ip_01 -= vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
+                d_01  -= DIFF( vector0[ inc_i_v1 ], vector1[ inc_i_v1 ] );
             }
             ip_12 -= vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
+            d_12  -= DIFF( vector1[ inc_i_v1 ], vector2[ inc_i_v1 ] );
         }
         // vector2, decrement
         q_2   -= pow(vector2[ dec_i_v2 ], 2);
@@ -255,6 +268,7 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
             q_2   -= pow(vector2[ inc_i_v2 ], 2);
             if(inc_i_v2 != dec_i_v1){
                 ip_12 -= vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
+                d_12  -= DIFF( vector1[ inc_i_v2 ], vector2[ inc_i_v2 ] );
             }
         }
         
@@ -269,23 +283,28 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         // vector0, decrement
         q_0   += pow(vector0[ dec_i_v0 ], 2);
         ip_01 += vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
+        d_01  += DIFF( vector0[ dec_i_v0 ], vector1[ dec_i_v0 ] );
         // vector0, increment
         if(inc_i_v0 != dec_i_v0){
             q_0   += pow(vector0[ inc_i_v0 ], 2);
             ip_01 += vector0[ inc_i_v0 ] * vector1[ inc_i_v0 ];
+            d_01  += DIFF( vector0[ inc_i_v0 ], vector1[ inc_i_v0 ] );
         }
         // vector1, decrement
         q_1   += pow(vector1[ dec_i_v1 ], 2);
         // ip_01 += vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
         // duplicated as inc_i_v0 = dec_i_v1
         ip_12 += vector1[ dec_i_v1 ] * vector2[ dec_i_v1 ];
+        d_12  += DIFF( vector1[ dec_i_v1 ], vector2[ dec_i_v1 ] );
         // vector 1, increment
         if(inc_i_v1 != dec_i_v1){
             q_1   += pow(vector1[ inc_i_v1 ], 2);
             if(inc_i_v1 != dec_i_v0){
                 ip_01 += vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
+                d_01  += DIFF( vector0[ inc_i_v1 ], vector1[ inc_i_v1 ] );
             }
             ip_12 += vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
+            d_12  += DIFF( vector1[ inc_i_v1 ], vector2[ inc_i_v1 ] );
         }
         // vector2, decrement
         q_2   += pow(vector2[ dec_i_v2 ], 2);
@@ -296,6 +315,7 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
             q_2   += pow(vector2[ inc_i_v2 ], 2);
             if(inc_i_v2 != dec_i_v1){
                 ip_12 += vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
+                d_12  += DIFF( vector1[ inc_i_v2 ], vector2[ inc_i_v2 ] );
             }
         }
     }

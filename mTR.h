@@ -113,6 +113,7 @@ repeat_in_read *RRs;
 // External functions
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define DIFF(x, y) ((x) > (y) ? ((x) - (y)) : ((y) - (x)))
 
 int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment);
 void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment);
@@ -139,6 +140,7 @@ int query_counter;
 
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
+//#define Manhattan_Distance
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
