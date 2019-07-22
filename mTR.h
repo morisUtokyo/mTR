@@ -142,7 +142,7 @@ int query_counter;
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
 #define Manhattan_Distance
-#define PRINT_COMP_TIME
+//#define PRINT_COMP_TIME
 
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
