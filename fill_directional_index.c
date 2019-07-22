@@ -147,7 +147,7 @@ void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_s
     }
 }
 
-void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen, int random_string_length){
+void fill_directional_index_Manhattan(int DI_array_length, int w, int k, int inputLen, int random_string_length){
     // We use inputLen and random_string_length for analyzing patterns of DI and Pearson's CC only.
     
     for(int i=0; i<DI_array_length; i++){
@@ -168,8 +168,134 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
     }
     // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
     // Compute the initial values for s(sum), q(squared sum), ip(inner product), and d(Manhattan distance)
-    double s_0, s_1, s_2, q_0, q_1, q_2, ip_01, ip_12, d_01, d_12;
-    s_0 = 0; s_1 = 0; s_2 = 0; q_0 = 0; q_1 = 0; q_2 = 0; ip_01 = 0; ip_12 = 0; d_01 = 0; d_12 = 0;
+    double s_0, s_1, s_2, d_01, d_12;
+    s_0 = 0; s_1 = 0; s_2 = 0; d_01 = 0; d_12 = 0;
+    for(int i=0; i<pow4[k]; i++){
+        s_0    += vector0[i];
+        s_1    += vector1[i];
+        s_2    += vector2[i];
+        d_01   += DIFF( vector0[i], vector1[i] );
+        d_12   += DIFF( vector1[i], vector2[i] );
+    }
+    // Shift vector0/1/2 starting from i=1 can calculate directional indexes
+    for(int i=0; i < (DI_array_length - w - random_string_length - k + 1); i++){
+        if(s_0 == s_1 && s_1 == s_2){}
+        else{
+            fprintf(stderr, "inconsistency in fill_directional_index_Manhattan\n");
+            exit(EXIT_FAILURE);
+        }
+        // Compute the directional index at i
+        double DI;
+        DI = (1 - d_12/s_1) - (1 - d_01/s_0);
+        // Note that DI is computed for position i+w (NOT i !!)
+        directional_index_tmp[i+w] = DI;
+        
+#ifdef DUMP_DI_PCC
+        int real_pos = i+w-random_string_length;
+        if( 0 <= real_pos && real_pos < inputLen){
+            fprintf(stdout, "%i,%f\n", real_pos, P_12);     // Pearson's correlation coefficients
+            //fprintf(stdout, "%i,%f\n", real_pos, DI);   // Directional index
+        }
+#endif
+        
+        // Incremental updates of s, q, and ip
+        // Determine positions to be updated
+        // dec_i_v0 means the position in vector0 was decremented.
+        int dec_i_v0, inc_i_v0, dec_i_v1, inc_i_v1, dec_i_v2, inc_i_v2;
+        dec_i_v0 = inputString_w_rand[i];
+        inc_i_v0 = inputString_w_rand[i + w];
+        dec_i_v1 = inputString_w_rand[i + w];
+        inc_i_v1 = inputString_w_rand[i + w*2];
+        dec_i_v2 = inputString_w_rand[i + w*2];
+        inc_i_v2 = inputString_w_rand[i + w*3];
+        
+        // Subtract changes before updates
+        // vector0, decrement
+        d_01  -= DIFF( vector0[ dec_i_v0 ], vector1[ dec_i_v0 ] );
+        // vector0, increment
+        if(inc_i_v0 != dec_i_v0){
+            d_01  -= DIFF( vector0[ inc_i_v0 ], vector1[ inc_i_v0 ] );
+        }
+        // vector1, decrement
+        d_12  -= DIFF( vector1[ dec_i_v1 ], vector2[ dec_i_v1 ] );
+        // vector 1, increment
+        if(inc_i_v1 != dec_i_v1){
+            if(inc_i_v1 != dec_i_v0){
+                d_01  -= DIFF( vector0[ inc_i_v1 ], vector1[ inc_i_v1 ] );
+            }
+            d_12  -= DIFF( vector1[ inc_i_v1 ], vector2[ inc_i_v1 ] );
+        }
+        // vector2, decrement
+        // ip_12 -= vector1[ dec_i_v2 ] * vector2[ dec_i_v2 ];
+        // duplicated as inc_i_c1 == dec_i_v2
+        // vector2, increment
+        if(inc_i_v2 != dec_i_v2){
+            if(inc_i_v2 != dec_i_v1){
+                d_12  -= DIFF( vector1[ inc_i_v2 ], vector2[ inc_i_v2 ] );
+            }
+        }
+        
+        // Update vectors and save the previous values before decrement/increment vectors
+        vector0[ dec_i_v0 ]--;  s_0--;
+        vector0[ inc_i_v0 ]++;  s_0++;
+        vector1[ dec_i_v1 ]--;  s_1--;
+        vector1[ inc_i_v1 ]++;  s_1++;
+        vector2[ dec_i_v2 ]--;  s_2--;
+        vector2[ inc_i_v2 ]++;  s_2++;
+        // Add changes after updates
+        // vector0, decrement
+        d_01  += DIFF( vector0[ dec_i_v0 ], vector1[ dec_i_v0 ] );
+        // vector0, increment
+        if(inc_i_v0 != dec_i_v0){
+            d_01  += DIFF( vector0[ inc_i_v0 ], vector1[ inc_i_v0 ] );
+        }
+        // vector1, decrement
+        // ip_01 += vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
+        // duplicated as inc_i_v0 = dec_i_v1
+        d_12  += DIFF( vector1[ dec_i_v1 ], vector2[ dec_i_v1 ] );
+        // vector 1, increment
+        if(inc_i_v1 != dec_i_v1){
+            if(inc_i_v1 != dec_i_v0){
+                d_01  += DIFF( vector0[ inc_i_v1 ], vector1[ inc_i_v1 ] );
+            }
+            d_12  += DIFF( vector1[ inc_i_v1 ], vector2[ inc_i_v1 ] );
+        }
+        // vector2, decrement
+        // ip_12 += vector1[ dec_i_v2 ] * vector2[ dec_i_v2 ];
+        // duplicated as inc_i_c1 == dec_i_v2
+        // vector2, increment
+        if(inc_i_v2 != dec_i_v2){
+            if(inc_i_v2 != dec_i_v1){
+                d_12  += DIFF( vector1[ inc_i_v2 ], vector2[ inc_i_v2 ] );
+            }
+        }
+    }
+}
+
+
+void fill_directional_index_PCC(int DI_array_length, int w, int k, int inputLen, int random_string_length){
+    // We use inputLen and random_string_length for analyzing patterns of DI and Pearson's CC only.
+    
+    for(int i=0; i<DI_array_length; i++){
+        directional_index_tmp[i] = -1;
+    }
+    
+    // initialize vectors
+    for(int i=0; i < 4 * BLK; i++){
+        vector0[i] = 0;
+        vector1[i] = 0;
+        vector2[i] = 0;
+    }
+    
+    for(int i=0; i<w; i++){
+        vector0[ inputString_w_rand[i] ]++;
+        vector1[ inputString_w_rand[i + w] ]++;
+        vector2[ inputString_w_rand[i + w*2] ]++;
+    }
+    // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
+    // Compute the initial values for s(sum), q(squared sum), ip(inner product), and d(Manhattan distance)
+    double s_0, s_1, s_2, q_0, q_1, q_2, ip_01, ip_12;
+    s_0 = 0; s_1 = 0; s_2 = 0; q_0 = 0; q_1 = 0; q_2 = 0; ip_01 = 0; ip_12 = 0;
     for(int i=0; i<pow4[k]; i++){
         s_0    += vector0[i];
         s_1    += vector1[i];
@@ -179,14 +305,12 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         q_2    += vector2[i] * vector2[i];
         ip_01  += vector0[i] * vector1[i];
         ip_12  += vector1[i] * vector2[i];
-        d_01   += DIFF( vector0[i], vector1[i] );
-        d_12   += DIFF( vector1[i], vector2[i] );
     }
     // Shift vector0/1/2 starting from i=1 can calculate directional indexes
     for(int i=0; i < (DI_array_length - w - random_string_length - k + 1); i++){
         if(s_0 == s_1 && s_1 == s_2){}
         else{
-            fprintf(stderr, "inconsistency in fill_directional_index_tmp\n");
+            fprintf(stderr, "inconsistency in fill_directional_index_PCC\n");
             exit(EXIT_FAILURE);
         }
         // Compute the directional index at i
@@ -205,14 +329,8 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
             P_12 = 0;
         }
         double DI;
-#ifdef Manhattan_Distance
-        DI = (1 - d_12/s_1) - (1 - d_01/s_0);
-        // d_01 and d_12 are the Manhattan distances, s_0 and s_1 are the sums of vector elements,
-        // d_12/s_1 and d_01/s_0 are the mismatch ratios between the two vectors, and
-        // 1 - d_12/s_1 and 1 - d_01/s_0 are the match ratios.
-#else
         DI =  P_12 - P_01;
-#endif
+
         // Note that DI is computed for position i+w (NOT i !!)
         directional_index_tmp[i+w] = DI;
         
@@ -238,26 +356,21 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         // vector0, decrement
         q_0   -= pow(vector0[ dec_i_v0 ], 2);
         ip_01 -= vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
-        d_01  -= DIFF( vector0[ dec_i_v0 ], vector1[ dec_i_v0 ] );
         // vector0, increment
         if(inc_i_v0 != dec_i_v0){
             q_0   -= pow(vector0[ inc_i_v0 ], 2);
             ip_01 -= vector0[ inc_i_v0 ] * vector1[ inc_i_v0 ];
-            d_01  -= DIFF( vector0[ inc_i_v0 ], vector1[ inc_i_v0 ] );
         }
         // vector1, decrement
         q_1   -= pow(vector1[ dec_i_v1 ], 2);
         ip_12 -= vector1[ dec_i_v1 ] * vector2[ dec_i_v1 ];
-        d_12  -= DIFF( vector1[ dec_i_v1 ], vector2[ dec_i_v1 ] );
         // vector 1, increment
         if(inc_i_v1 != dec_i_v1){
             q_1   -= pow(vector1[ inc_i_v1 ], 2);
             if(inc_i_v1 != dec_i_v0){
                 ip_01 -= vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
-                d_01  -= DIFF( vector0[ inc_i_v1 ], vector1[ inc_i_v1 ] );
             }
             ip_12 -= vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
-            d_12  -= DIFF( vector1[ inc_i_v1 ], vector2[ inc_i_v1 ] );
         }
         // vector2, decrement
         q_2   -= pow(vector2[ dec_i_v2 ], 2);
@@ -268,7 +381,6 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
             q_2   -= pow(vector2[ inc_i_v2 ], 2);
             if(inc_i_v2 != dec_i_v1){
                 ip_12 -= vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
-                d_12  -= DIFF( vector1[ inc_i_v2 ], vector2[ inc_i_v2 ] );
             }
         }
         
@@ -283,28 +395,23 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
         // vector0, decrement
         q_0   += pow(vector0[ dec_i_v0 ], 2);
         ip_01 += vector0[ dec_i_v0 ] * vector1[ dec_i_v0 ];
-        d_01  += DIFF( vector0[ dec_i_v0 ], vector1[ dec_i_v0 ] );
         // vector0, increment
         if(inc_i_v0 != dec_i_v0){
             q_0   += pow(vector0[ inc_i_v0 ], 2);
             ip_01 += vector0[ inc_i_v0 ] * vector1[ inc_i_v0 ];
-            d_01  += DIFF( vector0[ inc_i_v0 ], vector1[ inc_i_v0 ] );
         }
         // vector1, decrement
         q_1   += pow(vector1[ dec_i_v1 ], 2);
         // ip_01 += vector0[ dec_i_v1 ] * vector1[ dec_i_v1 ];
         // duplicated as inc_i_v0 = dec_i_v1
         ip_12 += vector1[ dec_i_v1 ] * vector2[ dec_i_v1 ];
-        d_12  += DIFF( vector1[ dec_i_v1 ], vector2[ dec_i_v1 ] );
         // vector 1, increment
         if(inc_i_v1 != dec_i_v1){
             q_1   += pow(vector1[ inc_i_v1 ], 2);
             if(inc_i_v1 != dec_i_v0){
                 ip_01 += vector0[ inc_i_v1 ] * vector1[ inc_i_v1 ];
-                d_01  += DIFF( vector0[ inc_i_v1 ], vector1[ inc_i_v1 ] );
             }
             ip_12 += vector1[ inc_i_v1 ] * vector2[ inc_i_v1 ];
-            d_12  += DIFF( vector1[ inc_i_v1 ], vector2[ inc_i_v1 ] );
         }
         // vector2, decrement
         q_2   += pow(vector2[ dec_i_v2 ], 2);
@@ -315,7 +422,6 @@ void fill_directional_index_tmp(int DI_array_length, int w, int k, int inputLen,
             q_2   += pow(vector2[ inc_i_v2 ], 2);
             if(inc_i_v2 != dec_i_v1){
                 ip_12 += vector1[ inc_i_v2 ] * vector2[ inc_i_v2 ];
-                d_12  += DIFF( vector1[ inc_i_v2 ], vector2[ inc_i_v2 ] );
             }
         }
     }
@@ -378,7 +484,11 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         // Put random sequences of the input length before and after the input string
     for(int w = 20; w < 50  && w < inputLen/2; w += 10) // w = 20, 30, 40
     {
-        fill_directional_index_tmp( DI_array_length, w, k, inputLen, random_string_length);
+#ifdef Manhattan_Distance
+        fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
+#else
+        fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
+#endif
         put_local_maximum_into_directional_index( DI_array_length, w );
     }
 
@@ -388,7 +498,11 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         // Put random sequences of the input length before and after the input string
     for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; )
     {
-        fill_directional_index_tmp( DI_array_length, w, k, inputLen, random_string_length);
+#ifdef Manhattan_Distance
+        fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
+#else
+        fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
+#endif
         put_local_maximum_into_directional_index( DI_array_length, w );
         // Sizes of windows
         if(w < 100){

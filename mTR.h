@@ -34,6 +34,7 @@
 #define MAX_PERIOD 500          // Maximum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define ALIGNMENT_WIDTH_PRINTING 50
+#define MAX_LEN_overlapping_alignments 100
 
 
 // The following values are optimzed for a benchmark dataset.
@@ -140,7 +141,9 @@ int query_counter;
 
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
-//#define Manhattan_Distance
+#define Manhattan_Distance
+#define PRINT_COMP_TIME
+
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
 //#define DEBUG_progressive_multiple_alignment
@@ -151,5 +154,5 @@ int query_counter;
 
 //#define DEBUG_finding_ranges
 //#define DEBUG_NUM_QUERIES
-//#define PRINT_COMP_TIME
+//#define Overlapping
 

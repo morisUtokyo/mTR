@@ -121,6 +121,14 @@ public:
                ConsensusMethod,
                string
                );
+
+#ifdef Overlapping
+        if(predecessor != NULL){
+            if(predecessor->rep_end  >= rep_start){
+                printf("------------ overlapping ----------------\n");
+            }
+        }
+#endif
         
         if(print_alignment == 1){
             printf("\n");
@@ -373,15 +381,16 @@ void chaining(int print_alignment){
                 // Search for a position such that tmpY->end_y <= tmpX_alignment->end_y
                 for(tmpY = sorted_by_Y.begin(), prevY = tmpY;
                     tmpY != sorted_by_Y.end();
-                    prevY = tmpY, tmpY++){
-                    if(prevY->second->end_y <= tmpX_alignment->start_y &&
-                       tmpY->second->end_y > tmpX_alignment->start_y)
+                    prevY = tmpY, tmpY++)
+                {
+                    if(prevY->second->end_y <= tmpX_alignment->start_y + MAX_LEN_overlapping_alignments &&
+                       tmpY->second->end_y   > tmpX_alignment->start_y + MAX_LEN_overlapping_alignments )
                     {
                         tmpX_alignment->set_predecessor(prevY->second);
                         break;
                     }
                 }
-                if(prevY->second->end_y <= tmpX_alignment->start_y &&
+                if(prevY->second->end_y <= tmpX_alignment->start_y + MAX_LEN_overlapping_alignments &&
                    tmpY == sorted_by_Y.end())
                 {
                     tmpX_alignment->set_predecessor(prevY->second);
