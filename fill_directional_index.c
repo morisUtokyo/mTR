@@ -482,7 +482,8 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
     k = 3;
     init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
         // Put random sequences of the input length before and after the input string
-    for(int w = 20; w < 50  && w < inputLen/2; w += 10) // w = 20, 30, 40
+    for(int w = MIN_WINDOW; w < 100  && w < inputLen/2; w = 2 * w)
+    //for(int w = 20; w < 50  && w < inputLen/2; w += 10) // w = 20, 30, 40
     {
 #ifdef Manhattan_Distance
         fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
@@ -496,7 +497,8 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
     k = 5;
     init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
         // Put random sequences of the input length before and after the input string
-    for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; )
+    for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; w = 2 * w)
+    //for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; )
     {
 #ifdef Manhattan_Distance
         fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
@@ -505,6 +507,7 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
 #endif
         put_local_maximum_into_directional_index( DI_array_length, w );
         // Sizes of windows
+        /*
         if(w < 100){
             w += 20;
         }else if(w < 1000){
@@ -514,6 +517,7 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         }else{
             w += 10000;
         }
+         */
     }
 
     //  By removing random sequences of both ends, retain directional indexes of the input

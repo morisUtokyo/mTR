@@ -38,8 +38,8 @@
 
 
 // The following values are optimzed for a benchmark dataset.
-#define MIN_WINDOW 20  // Window size parameters for locating the boundaries of tandem repeats
-#define MAX_WINDOW 20000
+#define MIN_WINDOW 10 // 20  // Window size parameters for locating the boundaries of tandem repeats
+#define MAX_WINDOW 20480 //20000
 
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
@@ -142,7 +142,7 @@ int query_counter;
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
 #define Manhattan_Distance
-//#define PRINT_COMP_TIME
+#define PRINT_COMP_TIME
 
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around

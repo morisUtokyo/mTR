@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
     char *inputFile;
     int print_multiple_TR = 1;
     int print_alignment   = 0;
+    MIN_MAX_DI = 0;
     
     if(argc == 2){
         print_multiple_TR = 1;
@@ -57,17 +58,13 @@ int main(int argc, char *argv[])
             for(p++; *p != '\0'; p++){
                 switch(*p){
                     case 's':   print_multiple_TR = 0;
-                                MIN_MAX_DI = 0;
 #ifndef Manhattan_Distance
                                 MIN_MAX_DI = MIN_MAX_DI_SINGLE; // Pearson's correlation coefficient
 #endif
                                 break;
-                    case 'm':   print_multiple_TR = 1;
-                                MIN_MAX_DI = 0;
-                                break;
+                    case 'm':   print_multiple_TR = 1;  break;
                     case 'p':   print_alignment   = 1;  break;
-                    default:    MIN_MAX_DI = 0;
-                                break; // multiple mode
+                    default:    break; // multiple mode
                 }
             }
         }
