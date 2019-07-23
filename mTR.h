@@ -64,10 +64,6 @@ int *inputString_w_rand; // 4 decimal encoding of the input read string of lengt
 int *count;             // A table of size 4^k for counting sort.
 int *sortedString;      // Positions of 4-mers sorted wrt both 4-mers and their positions.
 
-double MIN_MAX_DI;      // For filtering out reads with less meaningful tandem repeats
-                        // 0.5 for the single mode, 0 for the multiple mode
-#define MIN_MAX_DI_SINGLE 0.5
-
 double *directional_index_tmp;  // For storing all DI values temporarily for a given w
 double *directional_index;      // For storing a locally maximum DI
 int *directional_index_end;     // The end position of the local maximum
@@ -86,6 +82,8 @@ char *alignment_repeats;
 // For printing the alignment of the predicted repeat unit with the input string
                         // The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 int **consensus, **gaps;  // Space for consensus
+
+double MIN_MAX_DI;      // For filtering out reads with less meaningful tandem repeats
 
 
 typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
@@ -142,7 +140,7 @@ int query_counter;
 // For debugging with #ifdef
 #define LOCAL_ALIGNMENT
 #define Manhattan_Distance
-#define PRINT_COMP_TIME
+//#define PRINT_COMP_TIME
 
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around

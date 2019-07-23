@@ -269,24 +269,22 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     
     for(int query_start=0; query_start < inputLen; query_start++){
         int query_end = directional_index_end[query_start];
-        if(-1 < query_end && query_end < inputLen)
+        if(-1 < query_end && query_end < inputLen && MIN_MAX_DI < directional_index[query_start])
         {
-            if( MIN_MAX_DI < directional_index[query_start] ){
-                // Move onto de Bruijn graph construction
-                clear_rr(&RRs[0]); clear_rr(&RRs[1]);
-                int width     = directional_index_w[query_start];
-                find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
-                query_counter++;
+            // Move onto de Bruijn graph construction
+            clear_rr(&RRs[0]); clear_rr(&RRs[1]);
+            int width     = directional_index_w[query_start];
+            find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
+            query_counter++;
 #ifdef DEBUG_NUM_QUERIES
-                fprintf(stderr, "%i\t%i\t%i\t%f\n", query_start, query_end, width, directional_index[query_start]);
+            fprintf(stderr, "%i\t%i\t%i\t%f\n", query_start, query_end, width, directional_index[query_start]);
 #endif
-                // Examine if a qualified TR is found
-                if( RRs[0].repeat_len > 0 &&
-                   RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
-                {
-                    insert_an_alignment(RRs[0]);
-                    remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
-                }
+            // Examine if a qualified TR is found
+            if( RRs[0].repeat_len > 0 &&
+               RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
+            {
+                insert_an_alignment(RRs[0]);
+                remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
             }
         }
     }
