@@ -36,6 +36,7 @@ extern "C" {
                           int   rep_end,
                           int   repeat_len,
                           int   rep_period,
+                          int   predicted_rep_period,
                           int   Num_freq_unit,
                           int   Num_matches,
                           int   Num_mismatches,
@@ -43,11 +44,13 @@ extern "C" {
                           int   Num_deletions,
                           int   Kmer,
                           int   ConsensusMethod,
-                          char* string );
+                          char* string,
+                          int*  string_score);
     void chaining(int print_alignment);
     void search_max(int print_alignment);
     void delete_set_of_alignments();
     extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end);
+    extern void revise_by_progressive_multiple_alignment(int* a_rep_unit_string, int rep_period, int query_start, int query_end, int k);
     extern void wrap_around_DP(
                                int *rep_unit, int unit_len,
                                int query_start, int query_end,
@@ -55,9 +58,6 @@ extern "C" {
                                int *return_rep_len, int *return_freq_unit,
                                int *return_matches, int *return_mismatches,
                                int *return_insertions, int *return_deletions);
-    extern int search_De_Bruijn_graph(
-                        int* rep_unit_string, int query_start, int query_end,
-                        int inputLen, int k );
-    extern void init_inputString(int k, int query_start, int query_end, int inputLen);
+    extern void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
 }
 #endif

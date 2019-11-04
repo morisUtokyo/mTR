@@ -46,6 +46,7 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->repeat_len        = -1;
     rr_a->rep_period        = -1;
     strcpy( rr_a->string, "");
+    for(int i=0; i<MAX_PERIOD; i++){ rr_a->string_score[i] = -1; }
     for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = -1; }
     rr_a->Num_freq_unit     = -1;
     rr_a->Num_matches       = -1;
@@ -65,7 +66,10 @@ void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
     rr_a->repeat_len        = rr_b->repeat_len;
     rr_a->rep_period        = rr_b->rep_period;
     strcpy( rr_a->string, rr_b->string);
-    for(int i=0; i<16; i++){ rr_a->freq_2mer[i] = rr_b->freq_2mer[i]; }
+    for(int i=0; i<MAX_PERIOD; i++){
+        rr_a->string_score[i]  = rr_b->string_score[i]; }
+    for(int i=0; i<16; i++){
+        rr_a->freq_2mer[i]  = rr_b->freq_2mer[i]; }
     rr_a->Num_freq_unit     = rr_b->Num_freq_unit;
     rr_a->Num_matches       = rr_b->Num_matches;
     rr_a->Num_mismatches    = rr_b->Num_mismatches;
@@ -186,14 +190,15 @@ void fill_directional_index_Manhattan(int DI_array_length, int w, int k, int inp
         }
         // Compute the directional index at i
         double DI;
-        DI = (1 - d_12/s_1) - (1 - d_01/s_0);
+        //DI = (1 - d_12/s_1) - (1 - d_01/s_0);
+        DI = (d_01 - d_12)/(2*s_0);
         // Note that DI is computed for position i+w (NOT i !!)
         directional_index_tmp[i+w] = DI;
         
-#ifdef DUMP_DI_PCC
+#ifdef DUMP_DI_Manhattan
         int real_pos = i+w-random_string_length;
         if( 0 <= real_pos && real_pos < inputLen){
-            fprintf(stdout, "%i,%f\n", real_pos, P_12);     // Pearson's correlation coefficients
+            fprintf(stdout, "%i,%f\n", real_pos, DI);     // Pearson's correlation coefficients
             //fprintf(stdout, "%i,%f\n", real_pos, DI);   // Directional index
         }
 #endif
@@ -476,50 +481,27 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         directional_index[i]   = -1;
         directional_index_end[i] = -1;
     }
-    int k;
-    
-    // For finding short tandem repeats of frequency <= 10 and of length 2-10
-    k = 3;
-    init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
-        // Put random sequences of the input length before and after the input string
-    for(int w = MIN_WINDOW; w < 100  && w < inputLen/2; w = 2 * w)
-    //for(int w = 20; w < 50  && w < inputLen/2; w += 10) // w = 20, 30, 40
-    {
-#ifdef Manhattan_Distance
-        fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
-#else
-        fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
-#endif
-        put_local_maximum_into_directional_index( DI_array_length, w );
-    }
 
-    // For finding longer tandem repeats
-    k = 5;
-    init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
+    // Fill directional index
+    for(int k=3; k<=5; k+=2){
+        int min_w = MIN_WINDOW;
+        int max_w = MAX_WINDOW;     // k==5
+        if(k==3){ max_w = 100; }
+        
+        init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
         // Put random sequences of the input length before and after the input string
-    for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; w = 2 * w)
-    //for(int w = MIN_WINDOW; w < MAX_WINDOW && w < inputLen/2; )
-    {
+        for(int w = min_w; w <= max_w && w < inputLen/2; w = 2 * w)
+        {
 #ifdef Manhattan_Distance
-        fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
+            fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
 #else
-        fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
+            fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
 #endif
-        put_local_maximum_into_directional_index( DI_array_length, w );
-        // Sizes of windows
-        /*
-        if(w < 100){
-            w += 20;
-        }else if(w < 1000){
-            w += 300;
-        }else if(w < 20000){
-            w += 2000;
-        }else{
-            w += 10000;
+            put_local_maximum_into_directional_index( DI_array_length, w );
         }
-         */
     }
-
+    
+    
     //  By removing random sequences of both ends, retain directional indexes of the input
     for(int i=0; i<inputLen; i++){
         int shifted_i = i + random_string_length;

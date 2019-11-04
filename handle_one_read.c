@@ -96,19 +96,13 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
     //---------------------------------------------------------------------------
     
     int rep_unit_string[MAX_PERIOD];
-    int actual_rep_period = search_De_Bruijn_graph(rep_unit_string, query_start, query_end, inputLen, k);
+    int rep_unit_score[MAX_PERIOD];
+    int predicted_rep_period, actual_rep_period;
     
-    if(actual_rep_period < MIN_PERIOD){
-        return;
-    }
+    search_De_Bruijn_graph(rep_unit_string, rep_unit_score, query_start, query_end, inputLen, k, &predicted_rep_period, &actual_rep_period);
     
-    int ConsensusMethod = DeBruijnGraphSearch;
+    if(actual_rep_period < MIN_PERIOD){ return;}
 
-    
-    //---------------------------------------------------------------------------
-    // Compute the accuracy of the representative unit string by wrap-around DP
-    //---------------------------------------------------------------------------
-    
     if(actual_rep_period * (query_end - query_start + 1) > WrapDPsize){
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
         clear_rr(rr);
@@ -130,9 +124,10 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         rr->rep_end            = actual_end;
         rr->repeat_len         = actual_repeat_len;
         rr->rep_period         = actual_rep_period;
+        rr->predicted_rep_period = predicted_rep_period;
         rr->Kmer               = k;
         rr->Num_freq_unit      = 0;
-        rr->ConsensusMethod    = ConsensusMethod;
+        rr->ConsensusMethod    = DeBruijnGraphSearch;
         rr->Num_freq_unit      = Num_freq_unit;
         rr->Num_matches        = Num_matches;
         rr->Num_mismatches     = Num_mismatches;
@@ -140,44 +135,11 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         rr->Num_deletions      = Num_deletions;
         
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
-        
+        for(int i=0; i<rr->rep_period; i++){
+            rr->string_score[i] = rep_unit_score[i];
+        }
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
     }
-}
-
-void init_inputString(int k, int query_start, int query_end, int inputLen){
-    
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
-    
-    // -------------------------------------------------------------------------------
-    // For performance improvement, we update the range from query_start to query_end
-    // Outside the range, the values of inputString are not reliable.
-    // -------------------------------------------------------------------------------
-    //for(int i=0; i<inputLen; i++){
-    for(int i = query_start; i < query_end+k-1 && i < inputLen; i++){
-        inputString[i] = orgInputString[i];
-    }
-    
-    int tmp = 0;
-    // for(int i = 0; i < k-1; i++){
-    for(int i = query_start; i < query_start+k-1; i++){
-        tmp = 4 * tmp + inputString[i];  // compute 4 decimal of first k-1 letters
-    }
-    
-    int pow4k_1 = pow4[k-1];
-    //for(int i=0; i<(inputLen-k+1); i++){
-    for(int i = query_start; i < query_end && i < (inputLen-k+1); i++){
-        inputString[i] = 4 * tmp + inputString[i+k-1];
-        tmp = inputString[i] % pow4k_1; //　remainder, compute 4 decimal of length k-1
-        if(tmp < 0){
-            fprintf(stderr, "fatal error at %i\t %i \t%i\n", i, inputString[i], pow4[k-1] );
-            exit(EXIT_FAILURE);
-        }
-    }
-    
-    gettimeofday(&e, NULL);
-    time_initialize_input_string += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
 }
 
 void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int inputLen, repeat_in_read *rr, repeat_in_read *tmp_rr ){
@@ -201,7 +163,6 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     clear_rr(tmp_rr);  // clear the space for the result
     for(int k = min_k; k <= max_k; k++){
         clear_rr(rr);
-        init_inputString(k, query_start, query_end, inputLen);
         find_tandem_repeat_sub(query_start, query_end, readID, inputLen, k, rr);
         
         if( max_matches < rr->Num_matches &&
@@ -224,6 +185,7 @@ void insert_an_alignment(repeat_in_read rr){
                                  rr.rep_end,
                                  rr.repeat_len,
                                  rr.rep_period,
+                                 rr.predicted_rep_period,
                                  rr.Num_freq_unit,
                                  rr.Num_matches,
                                  rr.Num_mismatches,
@@ -231,7 +193,8 @@ void insert_an_alignment(repeat_in_read rr){
                                  rr.Num_deletions,
                                  rr.Kmer,
                                  rr.ConsensusMethod,
-                                 rr.string
+                                 rr.string,
+                                 rr.string_score
                                  );
 }
 
@@ -276,13 +239,12 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
             int width     = directional_index_w[query_start];
             find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
             query_counter++;
-#ifdef DEBUG_NUM_QUERIES
-            fprintf(stderr, "%i\t%i\t%i\t%f\n", query_start, query_end, width, directional_index[query_start]);
-#endif
             // Examine if a qualified TR is found
             if( RRs[0].repeat_len > 0 &&
                RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
             {
+                polish_repeat( &RRs[0], inputLen);
+                
                 insert_an_alignment(RRs[0]);
                 remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
             }

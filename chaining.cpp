@@ -52,6 +52,7 @@ public:
     int     rep_end;
     int     repeat_len;
     int     rep_period;
+    int     predicted_rep_period;
     int     Num_freq_unit;
     int     Num_matches;
     int     Num_mismatches;
@@ -60,6 +61,7 @@ public:
     int     Kmer;
     int     ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
     char    string[MAX_PERIOD];
+    int     string_score[MAX_PERIOD];
 
     Alignment(char* a_readID,
               int   a_inputLen,
@@ -67,6 +69,7 @@ public:
               int   a_rep_end,
               int   a_repeat_len,
               int   a_rep_period,
+              int   a_predicted_rep_period,
               int   a_Num_freq_unit,
               int   a_Num_matches,
               int   a_Num_mismatches,
@@ -74,7 +77,8 @@ public:
               int   a_Num_deletions,
               int   a_Kmer,
               int   a_ConsensusMethod,
-              char* a_string )
+              char* a_string,
+              int*  a_string_score)
     {
 		start_x     = a_rep_start;
 		start_y	    = a_rep_start;
@@ -90,6 +94,7 @@ public:
         rep_end     = a_rep_end;
         repeat_len  = a_repeat_len;
         rep_period  = a_rep_period;
+        predicted_rep_period = a_predicted_rep_period;
         Num_freq_unit   = a_Num_freq_unit;
         Num_matches     = a_Num_matches;
         Num_mismatches  = a_Num_mismatches;
@@ -98,33 +103,44 @@ public:
         Kmer        = a_Kmer;
         ConsensusMethod = a_ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
         strcpy( string, a_string );
+        for(int i=0; i<rep_period; i++){
+            string_score[i] = a_string_score[i]; }
         
 	}
     
     void print_one_TR(int print_alignment)const{
-        printf(
-               "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
-               //rr.ID,
-               readID,
-               inputLen,
-               rep_start,
-               rep_end,
-               repeat_len,
-               rep_period,
-               Num_freq_unit,
-               Num_matches,
-               (float)Num_matches/repeat_len,
-               Num_mismatches,
-               Num_insertions,
-               Num_deletions,
-               Kmer,
-               ConsensusMethod,
-               string
-               );
+        
+    printf(
+           "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
+           readID,
+           inputLen,
+           rep_start,
+           rep_end,
+           repeat_len,
+           rep_period,
+           Num_freq_unit,
+           Num_matches,
+           (float)Num_matches/repeat_len,
+           Num_mismatches,
+           Num_insertions,
+           Num_deletions,
+           Kmer,
+           ConsensusMethod,
+           string
+           );
+        
+#ifdef DEBUG_unit_score
+    printf("\n\t%s", string);
+    for(int k=Kmer; Kmer<=k; k--){
+        printf("\n%i\t", k);
+        print_freq(rep_start, rep_end, rep_period, const_cast<char*>(string), inputLen, k);
+    }
+    printf("\n");
+#endif
 
-#ifdef Overlapping
+#ifdef Print_overlapping_event
         if(predecessor != NULL){
-            if(predecessor->rep_end  >= rep_start){
+            if(predecessor->rep_end  > rep_start){
                 printf("------------ overlapping ----------------\n");
             }
         }
@@ -263,9 +279,6 @@ public:
                     
                     for(int i=0; i<rep_period; i++){ a_rep_unit[i] = char2int(string[i]); }
                     
-                    //init_inputString(Kmer, query_start, query_end, inputLen);
-                    //actual_rep_period = search_De_Bruijn_graph(a_rep_unit, query_start, query_end, inputLen, Kmer);
-                    
                     wrap_around_DP(a_rep_unit, actual_rep_period,
                                    query_start, query_end,
                                    &rep_start, &rep_end, &repeat_len, &Num_freq_unit,
@@ -298,6 +311,7 @@ void insert_an_alignment_into_set(
                       int   rep_end,
                       int   repeat_len,
                       int   rep_period,
+                      int   predicted_rep_period,
                       int   Num_freq_unit,
                       int   Num_matches,
                       int   Num_mismatches,
@@ -305,7 +319,8 @@ void insert_an_alignment_into_set(
                       int   Num_deletions,
                       int   Kmer,
                       int   ConsensusMethod,
-                      char* string )
+                      char* string,
+                      int*  string_score)
 {
     set_of_alignments.insert(
                       new Alignment(
@@ -315,6 +330,7 @@ void insert_an_alignment_into_set(
                             rep_end,
                             repeat_len,
                             rep_period,
+                            predicted_rep_period,
                             Num_freq_unit,
                             Num_matches,
                             Num_mismatches,
@@ -322,7 +338,8 @@ void insert_an_alignment_into_set(
                             Num_deletions,
                             Kmer,
                             ConsensusMethod,
-                            string ));
+                            string,
+                            string_score));
 }
 
 void search_max(int print_alignment){
@@ -365,8 +382,10 @@ void chaining(int print_alignment){
         iter != set_of_alignments.end();
         iter++)
     {
-        sorted_by_X.insert(make_pair((*iter)->start_x,*iter));
-        sorted_by_X.insert(make_pair((*iter)->end_x,  *iter));
+        if((*iter)->start_x + MAX_LEN_overlapping <=  (*iter)->end_x ){
+            sorted_by_X.insert(make_pair( (*iter)->start_x,*iter) );
+            sorted_by_X.insert(make_pair( ((*iter)->end_x - MAX_LEN_overlapping),  *iter) );
+        }
     }
     // Assign an optinal alignment to each alignment by updating the list sorted by Y
     for(multimap<int, Alignment*>::iterator iter = sorted_by_X.begin();
@@ -383,14 +402,14 @@ void chaining(int print_alignment){
                     tmpY != sorted_by_Y.end();
                     prevY = tmpY, tmpY++)
                 {
-                    if(prevY->second->end_y <= tmpX_alignment->start_y + MAX_LEN_overlapping_alignments &&
-                       tmpY->second->end_y   > tmpX_alignment->start_y + MAX_LEN_overlapping_alignments )
+                    if(prevY->second->end_y <= tmpX_alignment->start_y + MAX_LEN_overlapping &&
+                       tmpY->second->end_y   > tmpX_alignment->start_y + MAX_LEN_overlapping )
                     {
                         tmpX_alignment->set_predecessor(prevY->second);
                         break;
                     }
                 }
-                if(prevY->second->end_y <= tmpX_alignment->start_y + MAX_LEN_overlapping_alignments &&
+                if(prevY->second->end_y <= tmpX_alignment->start_y + MAX_LEN_overlapping &&
                    tmpY == sorted_by_Y.end())
                 {
                     tmpX_alignment->set_predecessor(prevY->second);

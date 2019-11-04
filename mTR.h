@@ -34,7 +34,7 @@
 #define MAX_PERIOD 500          // Maximum period length
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define ALIGNMENT_WIDTH_PRINTING 50
-#define MAX_LEN_overlapping_alignments 100
+#define MAX_LEN_overlapping 10 // = MIN_PERIOD * MIN_NUM_FREQ_UNIT
 
 
 // The following values are optimzed for a benchmark dataset.
@@ -43,13 +43,15 @@
 
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
+#define MAX_tiebreaks 1024
+
 #define BLK 4096        // Block size of input buffer.
 #define WrapDPsize  200000000    // 200M  = repeat_unit_size (200) x length_of_repeats (1,000,000)
 
 
 // Parameters for global and wrap around alignment
 #define MATCH_GAIN   1
-#define MISMATCH_PENALTY  1
+#define MISMATCH_PENALTY 1
 #define INDEL_PENALTY  3
 
 //  Choice of DeBruijn graph or progressive multiple alignment
@@ -73,7 +75,7 @@ int *vector0, *vector1, *vector2;
 double *freq_interval_len;       // For computing frequency distribution of interval lengths
                        // The length is MAX_INPUT_LENGTH
 
-int *count_period_all;  // Frequency of individual periods of size 1 to MAX_PERIOD.
+//int *count_period_all;  // Frequency of individual periods of size 1 to MAX_PERIOD.
 //int *rep_unit_string;   // String of representative unit of the focal repeat. The length is MAX_PERIOD.
 int *WrapDP;            // 2D space for Wrap-around global alignment DP for handling tandem repeats
 char *alignment_input;
@@ -102,6 +104,7 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     Kmer;
     int     ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
     char    string[MAX_PERIOD];
+    int     string_score[MAX_PERIOD];
     int     predicted_rep_period;
     int     freq_2mer[16];
 } repeat_in_read;
@@ -117,7 +120,14 @@ repeat_in_read *RRs;
 int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment);
 void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment);
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
-int search_De_Bruijn_graph( int* rep_unit_string, int query_start, int query_end, int inputLen, int k );
+void init_inputString(int k, int query_start, int query_end, int inputLen);
+void search_De_Bruijn_graph( int* rep_unit_string, int* rep_unit_score,
+    int query_start, int query_end, int inputLen, int k,
+    int *return_predicted_rep_period, int *return_actual_rep_period  );
+void polish_repeat(repeat_in_read *rr, int inputLen);
+void revise_by_progressive_multiple_alignment(
+    int* a_rep_unit_string, int rep_period,
+    int query_start, int query_end, int k);
 void wrap_around_DP(
    int *rep_unit, int unit_len,
    int query_start, int query_end,
@@ -125,32 +135,44 @@ void wrap_around_DP(
    int *return_rep_len, int *return_freq_unit,
    int *return_matches, int *return_mismatches,
    int *return_insertions, int *return_deletions);
-int progressive_multiple_alignment(
-    int max_start, int max_end, int max_pos,
-    int rep_period, int Kmer, int inputLen, int pow4k);
+
 
 void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b);
 void clear_rr(repeat_in_read *rr_a);
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
+void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
 
 float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_search_De_Bruijn_graph, time_count_table, time_chaining;
 int query_counter;
 
 // For debugging with #ifdef
-#define LOCAL_ALIGNMENT
 #define Manhattan_Distance
 //#define PRINT_COMP_TIME
 
+//#define DEBUG_unit_score
+//#define DEBUG_progressive_multiple_alignment
+
+//#define DEBUG_de_Bruijn
+//#define DEBUG_polish_repeat
+
+//#define DEBUG_chaining
+
+//#define DEBUG_progressive_multiple_alignment
+
+//#define DUMP_DI_Manhattan
+//#define DUMP_DI_PCC
+
+//#define Print_overlapping_event
+
 //#define DEBUG_algorithm_wrap_around_all
 //#define DEBUG_algorithm_wrap_around
-//#define DEBUG_progressive_multiple_alignment
+
 //#define DEBUG_incremental
 
-//#define DUMP_DI_PCC
-//#define DEBUG_chaining
+
 
 //#define DEBUG_finding_ranges
 //#define DEBUG_NUM_QUERIES
-//#define Overlapping
+
 

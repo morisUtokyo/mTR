@@ -51,7 +51,7 @@ void free_global_variables_and_exit(){
     if(vector1           != NULL){ free(vector1); }
     if(vector2           != NULL){ free(vector2); }
     if(freq_interval_len != NULL){ free(freq_interval_len); }
-    if(count_period_all  != NULL){ free(count_period_all); }
+    //if(count_period_all  != NULL){ free(count_period_all); }
     //if(rep_unit_string   != NULL){ free(rep_unit_string); }
     if(WrapDP            != NULL){ free(WrapDP); }
     if(alignment_input   != NULL){ free(alignment_input); }
@@ -121,8 +121,8 @@ void malloc_global_variables(){
     freq_interval_len   = (double *)malloc( sizeof(double) * MAX_INPUT_LENGTH);
     if( freq_interval_len == NULL ){ free_global_variables_and_exit(); }
     
-    count_period_all    = (int *)malloc( sizeof(int) * MAX_PERIOD);
-    if( count_period_all == NULL ){ free_global_variables_and_exit(); }
+    //count_period_all    = (int *)malloc( sizeof(int) * MAX_PERIOD);
+    //if( count_period_all == NULL ){ free_global_variables_and_exit(); }
     
     //rep_unit_string     = (int *)malloc( sizeof(int) * MAX_PERIOD);
     //if( rep_unit_string == NULL ){ free_global_variables_and_exit(); }
@@ -170,7 +170,7 @@ void free_global_variables(){
     free(vector1);
     free(vector2);
     free(freq_interval_len);
-    free(count_period_all);
+    //free(count_period_all);
     //free(rep_unit_string);
     free(WrapDP);
     free(alignment_input);

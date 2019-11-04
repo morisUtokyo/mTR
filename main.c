@@ -36,10 +36,12 @@
 #include "mTR.h"
 
 void print_error_message(){
-    fprintf(stderr, "mTR [-msp] <file name> \n");
-    fprintf(stderr, "-m: Output multiple tandem repeats (default setting). \n");
-    fprintf(stderr, "-s: Output the longest tandem repeat. \n");
+    fprintf(stderr, "mTR [-p] <file name> \n");
     fprintf(stderr, "-p: Output the alignment between the input sequence and predicted tandem repeat. \n");
+    //fprintf(stderr, "mTR [-msp] <file name> \n");
+    //fprintf(stderr, "-m: Output multiple tandem repeats (default setting). \n");
+    //fprintf(stderr, "-s: Output the longest tandem repeat. \n");
+    //fprintf(stderr, "-p: Output the alignment between the input sequence and predicted tandem repeat. \n");
 }
 
 int main(int argc, char *argv[])
@@ -50,6 +52,7 @@ int main(int argc, char *argv[])
     int print_alignment   = 0;
     if(argc == 2){
         print_multiple_TR = 1;
+        inputFile = argv[1];
     }else if(argc == 3){
         char *p;
         p=argv[1];
@@ -63,6 +66,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        inputFile = argv[2];
     }else{
         print_error_message();
         exit(EXIT_FAILURE);
@@ -78,8 +82,7 @@ int main(int argc, char *argv[])
     
     struct timeval s, e;
     gettimeofday(&s, NULL);
-    
-    inputFile = argv[2];
+
     fprintf(stderr, "The input file name is %s.\n", inputFile);
     int read_cnt = handle_one_file(inputFile, print_multiple_TR, print_alignment);
     fprintf(stderr, "Number of reads is %i.\n", read_cnt);
@@ -95,7 +98,7 @@ int main(int argc, char *argv[])
     
     fprintf(stderr, "%f\tComputing periods\n", time_period);
     fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
-    fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
+    //fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
     fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
     fprintf(stderr, "\t%f\tchaining\n",   time_chaining);

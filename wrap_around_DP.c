@@ -77,15 +77,9 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
     int next = unit_len+1;
     
     // Initialization
-#ifdef LOCAL_ALIGNMENT
     for(j=0; j<=rep_len; j++){   // Scan rep_unit
         WrapDP[next*0 + j] = 0; // local alignment
     }
-#else
-    for(j=0; j<=rep_len; j++){   // Scan rep_unit
-        WrapDP[next*0 + j] = INDEL_PENALTY * j; // global alignment
-    }
-#endif
     
     int max_wrd = 0;
     int max_i = 0;
@@ -104,17 +98,9 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
                 val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
                 if(j > 1){
                     val_deletion = WrapDP[next*i + j-1] - INDEL_PENALTY;
-#ifdef LOCAL_ALIGNMENT
                     WrapDP[next*i + j] = MAX(0, MAX( MAX( val_mismatch, val_insertion), val_deletion));
-#else
-                    WrapDP[next*i + j] = MAX( MAX( val_mismatch, val_insertion), val_deletion);
-#endif
                 }else{
-#ifdef LOCAL_ALIGNMENT
                     WrapDP[next*i + j] = MAX(0, MAX( val_mismatch, val_insertion));
-#else
-                    WrapDP[next*i + j] = MAX( val_mismatch, val_insertion);
-#endif
                 }
             }
             if(max_wrd < WrapDP[next*i + j])
@@ -245,22 +231,16 @@ void wrap_around_DP(int *a_rep_unit,          int unit_len,
     
     int i, j;
     int next = unit_len+1;
-    
-#ifdef LOCAL_ALIGNMENT
+
     for(j=0; j<=rep_len; j++){   // Scan rep_unit
         WrapDP[next*0 + j] = 0; // local alignment
     }
-#else
-    for(j=0; j<=rep_len; j++){   // Scan rep_unit
-        WrapDP[next*0 + j] = INDEL_PENALTY * j; // global alignment
-    }
-#endif
     
     int max_wrd = 0;
     int max_i = 0;
     int max_j = 0;
     int val_match, val_mismatch, val_insertion, val_deletion;
-    for(i=1; i <= rep_len; i++){        // Scan rep
+    for(i=1; i <= rep_len; i++){        // Scan repeat
         for(j=1; j<=unit_len; j++){   // Scan rep_unit
             if( WrapDPsize <= next*i + j ){
                 fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
@@ -273,17 +253,9 @@ void wrap_around_DP(int *a_rep_unit,          int unit_len,
                 val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
                 if(j > 1){
                     val_deletion = WrapDP[next*i + j-1] - INDEL_PENALTY;
-#ifdef LOCAL_ALIGNMENT
                     WrapDP[next*i + j] = MAX(0, MAX( MAX( val_mismatch, val_insertion), val_deletion));
-#else
-                    WrapDP[next*i + j] = MAX( MAX( val_mismatch, val_insertion), val_deletion);
-#endif
                 }else{
-#ifdef LOCAL_ALIGNMENT
                     WrapDP[next*i + j] = MAX(0, MAX( val_mismatch, val_insertion));
-#else
-                    WrapDP[next*i + j] = MAX( val_mismatch, val_insertion);
-#endif
                 }
             }
             if(max_wrd < WrapDP[next*i + j])
