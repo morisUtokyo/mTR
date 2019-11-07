@@ -146,14 +146,13 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     
     // A heuristic rule for setting the k-mer range for a de Bruijn graph to an nearly optimal one
     int min_k, max_k;
-    // #define minKmer 5
-    // #define maxKmer 11
-    if(w < 100){                // 2 - 6
-        min_k = minKmer - 3;
-        max_k = maxKmer - 5;
-    }else if(w < 1000){         // 5 - 9
-        min_k = minKmer;
-        max_k = maxKmer - 2;
+    if(w < 100){
+        min_k = minKmer - 3;    // 2
+        max_k = maxKmer - 6;    // 5
+        //max_k = maxKmer - 5;
+    }else if(w < 1000){
+        min_k = minKmer;        // 5
+        max_k = maxKmer - 2;    // 9
     }else{                      // 5 - 11
         min_k = minKmer;
         max_k = maxKmer;   

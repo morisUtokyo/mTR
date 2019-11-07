@@ -58,80 +58,101 @@ void init_inputString(int k, int query_start, int query_end, int inputLen){
     gettimeofday(&e, NULL);
     time_initialize_input_string += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
 }
-/*
-void max_position(int query_start, int query_end, int inputLen, int k, int *max_pos, int *rep_period)
-{
+
+int nearPrime(int width){
+    
+    int Primes[9]={1009, 2003, 4001, 8009, 16001, 32003, 64007, 128021, 256019};
+    int i=0;
+    for(i=0; Primes[i] < width && i<8; i++ );
+    return(Primes[i+1]);    // if width <= 2003, return 4001
+    
+}
+
+int generate_freqNode_return_maxNode(int query_start, int query_end, int k, int width){
+    
     struct timeval s, e;
     gettimeofday(&s, NULL);
     
-    // Initialization
-    memset(count, 0, pow4[k]*4);
-    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
-#ifdef DEBUG_de_Bruijn
-    printf("reset count in max_position\n");
-#endif
+    int Prime = nearPrime(width);
     
-    for(int i = query_start; i <= query_end; i++){ count[ inputString[i] ]++; }    // Perform counting
-    for(int i = 1; i < pow4[k]; i++){ count[i] = count[i-1] + count[i]; }
+    int maxNode;
     
-    for(int i=0; i<inputLen; i++){ sortedString[i] = 0; } // Initialization
-    for(int i=query_end; query_start <= i; i--){
-        sortedString[ --count[inputString[i]] ] = i;
-    }
-    // This loop decrement count repeatedly so that the number of inputString[i] occurrences is equal to count[inputString[i]+1] - count[inputString[i]].
-    
-    // Initialize for locating the position with the maximum frequency and for computing repeat period with the maximum prequency
-    int count_period_all[MAX_PERIOD];
-    for(int i = 0; i < MAX_PERIOD; i++){
-        count_period_all[i] = 0;
-    }
-    for(int j = query_start; j <= query_end; j++){
-        freq_interval_len[j] = 0;
-    }
-    for(int i = query_start; i <= query_end; i++){
-        int local_start = count[inputString[i]];
-        int local_end;
-        if(inputString[i] == pow4[k]-1){
-            local_end = inputLen;
-        }else{
-            local_end = count[ inputString[i]+1 ];
+    if(k <= count_maxKmer){     // 4^k
+        memset(count, 0, pow4[k]*4);    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
+        for(int i = query_start; i <= query_end; i++){ count[ inputString[i] ]++; }
+        int max_count = -1;
+        for(int i = query_start; i <= query_end; i++){
+            if( max_count < count[ inputString[i] ] ){
+                max_count = count[ inputString[i] ];
+                maxNode = inputString[i];
+            }
         }
-        freq_interval_len[i] = (double)(local_end - local_start);
-        
-        for(int j = local_start; j < (local_end - 1); j++){
-            int aPeriod = abs(sortedString[j+1] - sortedString[j]);
-            if(aPeriod < MAX_PERIOD){
-                count_period_all[ aPeriod ]++;
+    }else{
+        for(int i = 0; i < Prime; i++){
+            freqNode[i][0] = -1;    // no entry of Node
+            freqNode[i][1] = 0;     // reset the frequency to 0
+        }
+
+        int maxFreq = -1;
+        int Node;
+        for(int i = query_start; i <= query_end; i++){
+            Node = inputString[i];
+            int h =  Node % Prime;     // a hash value of the node
+            for(int j=0; ; j++){
+                // j counts the number of trials
+                if(freqNode[h][0] == -1){
+                    // Found an empty entry
+                    freqNode[h][0] = Node;
+                    freqNode[h][1] = 1;
+                    break;
+                }else if(freqNode[h][0] == Node){
+                    // The node has been already put into the table. Increment the frequency.
+                    freqNode[h][1]++;
+                    break;
+                }else if(Prime <= j){
+                    fprintf(stderr, "The hash table for nodes is full.\n");
+                    exit(EXIT_FAILURE);
+                }else{
+                    // Move to the next entry
+                    h = (h+1) % Prime;
+                }
+            }
+            if(maxFreq < freqNode[h][1]){
+                maxFreq = freqNode[h][1];
+                maxNode = Node;
             }
         }
     }
-    //　Locate the initial position (k-mer) with the maximum frequency
-    int a_max_pos = query_start;
-    int max_freq   = (int)freq_interval_len[a_max_pos];
-    for(int j=query_start; j <= query_end; j++){
-        if(max_freq < freq_interval_len[j]){
-            a_max_pos  = j;
-            max_freq = (int)freq_interval_len[a_max_pos];
-        }
-    }
-    *max_pos = a_max_pos;
-    
-    // Compute repeat period with the maximum frequency
-    int a_rep_period = 2;
-    max_freq = 0;
-    for(int p = 2; p < MAX_PERIOD; p++){
-        if(max_freq < count_period_all[p]){
-            a_rep_period = p;
-            max_freq = count_period_all[p];
-        }
-    }
-    *rep_period = a_rep_period;
-    
     gettimeofday(&e, NULL);
-    time_count_table
-    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    time_count_table += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
+    return(maxNode);
 }
-*/
+
+int freq_node(int Node, int k, int width){
+    
+    if(k <= count_maxKmer){
+        return( count[Node] );
+    }else{
+        int Prime = nearPrime(width);
+        int h = Node % Prime;
+        for(int j=0;  ; j++){
+            if(freqNode[h][0] == Node){
+                return(freqNode[h][1]);
+            }else if(freqNode[h][0] == -1){
+                // The node is absent in the table.
+                return(0);
+            }else if(Prime <= j){
+                fprintf(stderr, "The hash table for nodes is full.\n");
+                exit(EXIT_FAILURE);
+            }else{
+                // Move to the next
+                h = (h+1) % Prime;
+            }
+        }
+    }
+}
+
 void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int query_start, int query_end, int inputLen, int k,
     int *return_predicted_rep_period, int *return_actual_rep_period ){
 
@@ -141,16 +162,9 @@ void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int qu
     
     // Generate the list of k-mers and search for the node with the maximum count
     init_inputString(k, query_start, query_end, inputLen);
-    memset(count, 0, pow4[k]*4);    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
-    for(int i = query_start; i <= query_end; i++){ count[ inputString[i] ]++; }
-    int maxNode;
-    int max_count = -1;
-    for(int i = query_start; i <= query_end; i++){
-        if( max_count < count[ inputString[i] ] ){
-            max_count = count[ inputString[i] ];
-            maxNode = inputString[i];
-        }
-    }
+    int width = query_end - query_start + 1;
+    int maxNode = generate_freqNode_return_maxNode(query_start, query_end, k, width);
+    
     // de Bruijn graph search
     int initialNode = maxNode;
     int Node = initialNode;
@@ -161,7 +175,8 @@ void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int qu
     
     for(int l=0; l< MAX_PERIOD; l++){
         a_rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
-        rep_unit_score[l] = count[Node];
+        
+        rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
         
         int m, lsd, max_lsd, max_count_lsd, init_tiebreaks, tiebreaks;
         list_tiebreaks[0] = 0;
@@ -173,7 +188,9 @@ void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int qu
             for(int i=0; i < init_tiebreaks; i++){
                 for(int j=0; j<4; j++){
                     lsd = 4 * list_tiebreaks[i] + j; // lsd: least significant (4) digit
-                    int tmp_count = count[ pow4[m] * (Node % pow4[k-m]) + lsd ];
+                    int tmp_count = freq_node( pow4[m] * (Node % pow4[k-m]) + lsd, k, width );
+                    // int tmp_count = count[ pow4[m] * (Node % pow4[k-m]) + lsd ];
+                    
                     if( max_count_lsd < tmp_count){
                         max_count_lsd = tmp_count;
                         max_lsd = lsd;
@@ -209,13 +226,14 @@ void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int qu
     *return_actual_rep_period   = actual_rep_period;
 }
 
-int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit){
+int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit, int width){
     
     int tmpNode = bestNode;
     int sumFreq = 0;
     for( int j = start; start - k < j; j--){ // wrap around
         tmpNode = int_unit[ j%rep_period ] * pow4[k-1] + (tmpNode / 4) ;
-        sumFreq += count[tmpNode];
+        sumFreq += freq_node(tmpNode, k, width);
+        //sumFreq += count[tmpNode];
     }
     return(sumFreq);
 }
@@ -241,10 +259,13 @@ void polish_repeat(repeat_in_read *rr, int inputLen){
         return;
     }
     init_inputString(k, rr->rep_start, rr->rep_end, inputLen);
+    int width = rr->rep_end - rr->rep_start + 1;
+    int maxNode = generate_freqNode_return_maxNode(rr->rep_start, rr->rep_end, k, width);
+    /*
     memset(count, 0, pow4[k]*4);    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
     for(int i = rr->rep_start; i <= rr->rep_end; i++){
         count[ inputString[i] ]++; }    // Perform counting
-    
+    */
     // Convert a char array into an int array
     int int_unit[MAX_PERIOD];
     for(int i = 0; i < rr->rep_period; i++){
@@ -270,31 +291,32 @@ void polish_repeat(repeat_in_read *rr, int inputLen){
     int bestNode = refNode;
     for(int j = rep_period-1; 0 <= j; ){
         int refNode = int_unit[j] * pow4[k-1] + (bestNode / 4);
-        int tmp_best_freq = count[refNode];
+        int tmp_best_freq = freq_node(refNode, k, width);
+        //int tmp_best_freq = count[refNode];
         bestNode = refNode;
         
         if(rr->string_score[j] == 1 && suspicious(rr, j) == 1 )
         {
             for(int l = 0; l < 4; l++){
                 int alternativeNode = refNode + (l - int_unit[j]) * pow4[k-1];
-                if(alternativeNode < 0 || pow4[k] <= alternativeNode){
+                if( alternativeNode < 0 || pow4[k] <= alternativeNode){
                     fprintf(stderr, "fatal error: alternativeNode is out of range.\n");
                     exit(EXIT_FAILURE);
                 }
                     // Replace the first base with l = 0, 1, 2, 3.
-                if( tmp_best_freq < count[alternativeNode] ){
-                    tmp_best_freq = count[alternativeNode];
+                if( tmp_best_freq < freq_node(alternativeNode, k, width) ){
+                    tmp_best_freq = freq_node(alternativeNode, k, width);
                     bestNode = alternativeNode;
                 }
             }
             if(bestNode == refNode){    // No need to revise the next node
                 int_revised_unit[ j_revised-- ] = int_unit[ j-- ];
             }else{  // Use next three bases to calculate the score
-                int score_del = score_for_alignment( j, k, bestNode, rep_period, int_unit);
-                int score_sub = score_for_alignment( j-1, k, bestNode, rep_period, int_unit);
+                int score_del = score_for_alignment( j, k, bestNode, rep_period, int_unit, width);
+                int score_sub = score_for_alignment( j-1, k, bestNode, rep_period, int_unit, width);
                 int score_ins = -1;
                 if( bestNode / pow4[k-1] == int_unit[ (j-1) % rep_period] ){
-                    score_ins = score_for_alignment( j-2, k, bestNode, rep_period, int_unit);
+                    score_ins = score_for_alignment( j-2, k, bestNode, rep_period, int_unit, width);
                 }
                 int_revised_unit[ j_revised-- ] = bestNode / pow4[k-1]; // The first base
 
@@ -537,10 +559,13 @@ void revise_by_progressive_multiple_alignment(
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k){
     
     init_inputString(k, rep_start, rep_end, inputLen);
-    memset(count, 0, pow4[k]*4);
-    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
+    int width = rep_end - rep_start + 1;
+    int maxNode = generate_freqNode_return_maxNode(rep_start, rep_end, k, width);
+    /*
+    memset(count, 0, pow4[k]*4); //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
     for(int i = rep_start; i <= rep_end; i++){
         count[ inputString[i] ]++; }    // Perform counting
+    */
     
     // Convert a char array into an int array
     int int_unit[MAX_PERIOD];
@@ -563,7 +588,8 @@ void print_freq(int rep_start, int rep_end, int rep_period, char* string, int in
         tmp = int_Nodes[i] % pow4[k-1]; // remove the first base
     }
     for(int i = 0; i < rep_period; i++){
-        int freq = count[int_Nodes[i]];
+        int freq = freq_node( int_Nodes[i], k, width);
+        //int freq = count[int_Nodes[i]];
         if(freq<10){
             printf("%i", freq);
         }else{

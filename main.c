@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     
     fprintf(stderr, "%f\tComputing periods\n", time_period);
     fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
-    //fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
+    fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
     fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
     fprintf(stderr, "\t%f\tchaining\n",   time_chaining);

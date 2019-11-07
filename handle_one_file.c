@@ -41,6 +41,10 @@ void free_global_variables_and_exit(){
     if(inputString       != NULL){ free(inputString); }
     if(inputString_w_rand!= NULL){ free(inputString_w_rand); }
     if(count             != NULL){ free(count); }
+    if(freqNode          != NULL){ free(freqNode); }
+    for(int i = 0; i < PrimeMax; i++){
+        if( gaps[i] != NULL ){ free(freqNode[i]); }
+    }
     if(sortedString      != NULL){ free(sortedString); }
     if(RRs               != NULL){ free(RRs);}
     if(directional_index_tmp != NULL){ free(directional_index_tmp); }
@@ -88,8 +92,15 @@ void malloc_global_variables(){
     inputString_w_rand = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( inputString_w_rand == NULL ){ free_global_variables_and_exit(); }
     
-    count           = (int *)malloc( sizeof(int) * pow4[maxKmer]);
+    count           = (int *)malloc( sizeof(int) * pow4[count_maxKmer]);
     if( count == NULL ){ free_global_variables_and_exit(); }
+    
+    freqNode = malloc(sizeof(int *) * PrimeMax);
+    if( freqNode == NULL ){ free_global_variables_and_exit(); }
+    for(int i = 0; i < PrimeMax; i++){
+        freqNode[i] = malloc(sizeof(int) * 2);
+        if( freqNode[i] == NULL ){ free_global_variables_and_exit(); }
+    }
     
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( sortedString == NULL ){ free_global_variables_and_exit(); }
@@ -120,12 +131,6 @@ void malloc_global_variables(){
     
     freq_interval_len   = (double *)malloc( sizeof(double) * MAX_INPUT_LENGTH);
     if( freq_interval_len == NULL ){ free_global_variables_and_exit(); }
-    
-    //count_period_all    = (int *)malloc( sizeof(int) * MAX_PERIOD);
-    //if( count_period_all == NULL ){ free_global_variables_and_exit(); }
-    
-    //rep_unit_string     = (int *)malloc( sizeof(int) * MAX_PERIOD);
-    //if( rep_unit_string == NULL ){ free_global_variables_and_exit(); }
     
     WrapDP          = (int *)malloc(sizeof(int) * WrapDPsize);
     if( WrapDP == NULL ){ free_global_variables_and_exit(); }
@@ -160,6 +165,8 @@ void free_global_variables(){
     free(inputString);
     free(inputString_w_rand);
     free(count);
+    for(int i=0; i<PrimeMax; i++){ free(freqNode[i]); }
+    free(freqNode);
     free(sortedString);
     free(RRs);
     free(directional_index_tmp);

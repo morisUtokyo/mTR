@@ -58,12 +58,16 @@
 #define ProgressiveMultipleAlignment 0
 #define DeBruijnGraphSearch 1
 
+#define count_maxKmer 8
+#define PrimeMax 256019
+
 //  Global variables in the heap
 int *pow4;              // A table of pow(4, k)
 int *orgInputString;    // An input read string of length MAX_INPUT_LENGTH.
 int *inputString;       // 4 decimal encoding of the input read string of length MAX_INPUT_LENGTH.
 int *inputString_w_rand; // 4 decimal encoding of the input read string of length MAX_INPUT_LENGTH.
 int *count;             // A table of size 4^k for counting sort.
+int **freqNode;         // A hash table for storing the frequency of each node (node, frequency)
 int *sortedString;      // Positions of 4-mers sorted wrt both 4-mers and their positions.
 
 double *directional_index_tmp;  // For storing all DI values temporarily for a given w
