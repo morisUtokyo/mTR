@@ -144,7 +144,7 @@ int query_counter;
 
 // For debugging with #ifdef
 #define Manhattan_Distance
-#define PRINT_COMP_TIME
+//#define PRINT_COMP_TIME
 
 //#define DEBUG_unit_score
 //#define DEBUG_revise_representative_unit
