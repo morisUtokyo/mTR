@@ -138,6 +138,8 @@ public:
     printf("\n");
 #endif
 
+
+        
 #ifdef Print_overlapping_event
         if(predecessor != NULL){
             if(predecessor->rep_end  > rep_start){
@@ -279,10 +281,12 @@ public:
                     
                     for(int i=0; i<rep_period; i++){ a_rep_unit[i] = char2int(string[i]); }
                     
+                    /*
                     wrap_around_DP(a_rep_unit, actual_rep_period,
                                    query_start, query_end,
                                    &rep_start, &rep_end, &repeat_len, &Num_freq_unit,
                                    &Num_matches, &Num_mismatches, &Num_insertions, &Num_deletions);
+                    */
                     predecessor = maximimal->predecessor;
                     //print_one_TR(0);
                     

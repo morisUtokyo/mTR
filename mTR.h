@@ -32,6 +32,7 @@
 #define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
 #define MIN_PERIOD 2            // Minimum period length
 #define MAX_PERIOD 500          // Maximum period length
+#define MAX_PERIOD_FREQ 100     // The maximum frequency threshold for revising missing bases
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
 #define ALIGNMENT_WIDTH_PRINTING 50
 #define MAX_LEN_overlapping 10 // = MIN_PERIOD * MIN_NUM_FREQ_UNIT
@@ -58,11 +59,12 @@
 #define ProgressiveMultipleAlignment 0
 #define DeBruijnGraphSearch 1
 
-#define count_maxKmer 8
+#define count_maxKmer 6
 #define PrimeMax 256019
 
 //  Global variables in the heap
 int *pow4;              // A table of pow(4, k)
+int *min_coverage_for_missing_bases;
 int *orgInputString;    // An input read string of length MAX_INPUT_LENGTH.
 int *inputString;       // 4 decimal encoding of the input read string of length MAX_INPUT_LENGTH.
 int *inputString_w_rand; // 4 decimal encoding of the input read string of length MAX_INPUT_LENGTH.
@@ -125,21 +127,11 @@ int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment)
 void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment);
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
 void init_inputString(int k, int query_start, int query_end, int inputLen);
-void search_De_Bruijn_graph( int* rep_unit_string, int* rep_unit_score,
-    int query_start, int query_end, int inputLen, int k,
-    int *return_predicted_rep_period, int *return_actual_rep_period  );
-void polish_repeat(repeat_in_read *rr, int inputLen);
-void revise_by_progressive_multiple_alignment(
-    int* a_rep_unit_string, int rep_period,
-    int query_start, int query_end, int k);
-void wrap_around_DP(
-   int *rep_unit, int unit_len,
-   int query_start, int query_end,
-   int *actual_start,   int *actual_end,
-   int *return_rep_len, int *return_freq_unit,
-   int *return_matches, int *return_mismatches,
-   int *return_insertions, int *return_deletions);
 
+void search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr);
+void polish_repeat(repeat_in_read *rr);
+void revise_representative_unit( repeat_in_read *rr);
+void wrap_around_DP(int query_start, int query_end, repeat_in_read *rr);
 
 void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b);
 void clear_rr(repeat_in_read *rr_a);
@@ -152,10 +144,10 @@ int query_counter;
 
 // For debugging with #ifdef
 #define Manhattan_Distance
-//#define PRINT_COMP_TIME
+#define PRINT_COMP_TIME
 
 //#define DEBUG_unit_score
-//#define DEBUG_progressive_multiple_alignment
+//#define DEBUG_revise_representative_unit
 
 //#define DEBUG_de_Bruijn
 //#define DEBUG_polish_repeat

@@ -209,20 +209,26 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
 // The number of deletions is represented as a positive integer.
 
 // We used a local alignment algorithm in place of a global alignment that outputs lengthy alignments.
-void wrap_around_DP(int *a_rep_unit,          int unit_len,
-                    int query_start,        int query_end,
-                    int *actual_start,      int *actual_end,
-                    int *return_rep_len,    int *return_freq_unit,
-                    int *return_matches,    int *return_mismatches,
-                    int *return_insertions, int *return_deletions){
+
+void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     
     struct timeval s, e;
     gettimeofday(&s, NULL);
 
     // Initialization
+    int unit_len = rr->rep_period;
+    
     int rep_unit[MAX_PERIOD];
-    for(int i = 0; i<unit_len; i++){
-        rep_unit[i+1] = a_rep_unit[i];  // Shift by 1 for *1*-origin index
+    for(int i = 0; i < unit_len; i++){
+        int intBase;
+        switch(rr->string[i]){
+            case 'A': intBase = 0; break;
+            case 'C': intBase = 1; break;
+            case 'G': intBase = 2; break;
+            case 'T': intBase = 3; break;
+            default: fprintf(stderr, "fatal input char %c\n", rr->string[i]);
+        }
+        rep_unit[i+1] = intBase;  // Shift by 1 for *1*-origin index
     }
     
     int *rep;
@@ -319,18 +325,15 @@ void wrap_around_DP(int *a_rep_unit,          int unit_len,
     
     
     // Consider the 1-origin index carefully
-    int actual_repeat_len = max_i - i;
-    *actual_start       = query_start + i;
-    *actual_end         = query_start + max_i - 1;
-    
-    *return_rep_len     = actual_repeat_len;
-    *return_freq_unit   = (int)Num_scanned_unit/unit_len;
-    *return_matches     = Num_matches;
-    *return_mismatches  = Num_mismatches;
-    *return_insertions  = Num_insertions;
-    *return_deletions   = Num_deletions;
+    rr->rep_start           = query_start + i;
+    rr->rep_end             = query_start + max_i - 1;
+    rr->repeat_len          = max_i - 1;
+    rr->Num_freq_unit       = (int)Num_scanned_unit/unit_len;
+    rr->Num_matches         = Num_matches;
+    rr->Num_mismatches      = Num_mismatches;
+    rr->Num_insertions      = Num_insertions;
+    rr->Num_deletions       = Num_deletions;
  
     gettimeofday(&e, NULL);
     time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
 }
-

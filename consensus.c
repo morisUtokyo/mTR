@@ -153,12 +153,29 @@ int freq_node(int Node, int k, int width){
     }
 }
 
-void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int query_start, int query_end, int inputLen, int k,
-    int *return_predicted_rep_period, int *return_actual_rep_period ){
 
+void print_4_decimal_array(int* val, int len, char *return_string){
+    strcpy(return_string, "");
+    for(int i=0; i<len; i++){
+        switch(val[i]){
+            case 0: strcat(return_string, "A"); break;
+            case 1: strcat(return_string, "C"); break;
+            case 2: strcat(return_string, "G"); break;
+            case 3: strcat(return_string, "T"); break;
+            default: fprintf(stderr, "fatal error: input char %i", val[i]); exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     struct timeval s, e;
     gettimeofday(&s, NULL);
+    
+    int rep_unit_string[MAX_PERIOD];
+    int rep_unit_score[MAX_PERIOD];
+    int inputLen = rr->inputLen;
+    int k = rr->Kmer;
     
     // Generate the list of k-mers and search for the node with the maximum count
     init_inputString(k, query_start, query_end, inputLen);
@@ -169,12 +186,12 @@ void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int qu
     int initialNode = maxNode;
     int Node = initialNode;
     int actual_rep_period = 0;
-    for(int i = 0; i < MAX_PERIOD; i++){ a_rep_unit_string[i] = -1; }
+    for(int i = 0; i < MAX_PERIOD; i++){ rep_unit_string[i] = -1; }
     int list_tiebreaks[MAX_tiebreaks];
     int list_tiebreaks_new[MAX_tiebreaks];
     
     for(int l=0; l< MAX_PERIOD; l++){
-        a_rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
+        rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
         
         rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
         
@@ -218,12 +235,24 @@ void search_De_Bruijn_graph( int* a_rep_unit_string, int* rep_unit_score, int qu
             break;
         }
     }
+    
+    rr->rep_period           = actual_rep_period;
+    rr->predicted_rep_period = actual_rep_period;
+    rr->ConsensusMethod      = DeBruijnGraphSearch;
+
+    if(rr->rep_period < MIN_PERIOD){
+        return;
+    }else{
+        print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
+        for(int i=0; i<rr->rep_period; i++){
+            rr->string_score[i] = rep_unit_score[i];
+        }
+        freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
+    }
+    
     gettimeofday(&e, NULL);
     time_search_De_Bruijn_graph
     += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-    
-    *return_predicted_rep_period = actual_rep_period;
-    *return_actual_rep_period   = actual_rep_period;
 }
 
 int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit, int width){
@@ -251,9 +280,10 @@ int suspicious(repeat_in_read *rr, int j){
     }
 }
 
-void polish_repeat(repeat_in_read *rr, int inputLen){
+void polish_repeat(repeat_in_read *rr){
     
-    int k = rr->Kmer; // 6 < tt->Kmer
+    int k = rr->Kmer;
+    int inputLen = rr->inputLen;
     
     if( rr->rep_period <= k){ // No need to polish the repeat unit
         return;
@@ -261,11 +291,7 @@ void polish_repeat(repeat_in_read *rr, int inputLen){
     init_inputString(k, rr->rep_start, rr->rep_end, inputLen);
     int width = rr->rep_end - rr->rep_start + 1;
     int maxNode = generate_freqNode_return_maxNode(rr->rep_start, rr->rep_end, k, width);
-    /*
-    memset(count, 0, pow4[k]*4);    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
-    for(int i = rr->rep_start; i <= rr->rep_end; i++){
-        count[ inputString[i] ]++; }    // Perform counting
-    */
+
     // Convert a char array into an int array
     int int_unit[MAX_PERIOD];
     for(int i = 0; i < rr->rep_period; i++){
@@ -277,7 +303,6 @@ void polish_repeat(repeat_in_read *rr, int inputLen){
             default: fprintf(stderr, "fatal input char %c", rr->string[i]); exit(EXIT_FAILURE);
         }
     }
-    
     int rep_period = rr->rep_period;
     int int_revised_unit[MAX_PERIOD];
     int j_revised = MAX_PERIOD - 1;
@@ -292,7 +317,6 @@ void polish_repeat(repeat_in_read *rr, int inputLen){
     for(int j = rep_period-1; 0 <= j; ){
         int refNode = int_unit[j] * pow4[k-1] + (bestNode / 4);
         int tmp_best_freq = freq_node(refNode, k, width);
-        //int tmp_best_freq = count[refNode];
         bestNode = refNode;
         
         if(rr->string_score[j] == 1 && suspicious(rr, j) == 1 )
@@ -352,209 +376,228 @@ void polish_repeat(repeat_in_read *rr, int inputLen){
     rr->string[rr->rep_period] = '\0';
 }
 
+// Columns from the top represent mismatch ratios: 0.25, 0.2, 0.15, 0.1, 0.05, and 0.02.
+// Rows are read coverages that range from 0 to 20.
+int min_missing_bases[6][21] = {
+    0,1,2,2,3,3,3,4,4,4,5,5,6,6,6,7,7,7,8,8,8,
+    0,1,1,2,2,3,3,3,4,4,4,5,5,5,5,6,6,6,7,7,7,
+    0,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,
+    0,1,1,1,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,
+    0,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,3,3,3,3,
+    0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2
+};
+
+int min_missing(double ratio, int coverage){
+    int col, row;
+    
+    if(ratio > 0.225){        row = 0; }
+    else if(ratio > 0.175 ){  row = 1; }
+    else if(ratio > 0.125 ){  row = 2; }
+    else if(ratio > 0.075 ){  row = 3; }
+    else if(ratio > 0.025 ){  row = 4; }
+    else{                     row = 5; }
+    
+    col = coverage;
+    
+    return(min_missing_bases[row][col]);
+}
 
 // This function is not effective in increasing the accuracy of predicting repeat units perfectly
-void revise_by_progressive_multiple_alignment(
-    int* a_rep_unit_string, int rep_period, int query_start, int query_end, int k)
-    {
-        
-    #ifdef DEBUG_progressive_multiple_alignment
-        printf("rep_period, query_start, query_end, k = %i %i %i %i\n", rep_period, query_start, query_end, k);
-    #endif
-        
-    int consensus[MAX_PERIOD][5];   // 0-3 for A,C,G,T and 4 for a gap
-    int gaps[MAX_PERIOD][4];        // 0-3 for A,C,G,T
-        
-    for(int i=0; i<MAX_PERIOD; i++){
-        for(int j=0; j<5; j++){
-            consensus[i][j] = 0;
-        }
-        for(int j=0; j<4; j++){
-            gaps[i][j] = 0;
+//void revise_representative_unit( repeat_in_read *rr,  char *string, int unit_len, int query_start, int query_end){
+void revise_representative_unit( repeat_in_read *rr){
+
+    // Initialization
+    char *string    = rr->string;
+    int unit_len    = rr->rep_period;
+    int query_start = rr->rep_start;
+    int query_end   = rr->rep_end;
+    
+    // Convert a char array into an int array
+    int rep_unit[MAX_PERIOD];
+    for(int i = 0; i < unit_len; i++){
+        switch (string[i]) {    // Shift by 1
+            case 'A': rep_unit[i+1] = 0; break;
+            case 'C': rep_unit[i+1] = 1; break;
+            case 'G': rep_unit[i+1] = 2; break;
+            case 'T': rep_unit[i+1] = 3; break;
+            default: fprintf(stderr, "fatal input char %c", string[i]); exit(EXIT_FAILURE);
         }
     }
     
-    // A progressive multiple alignment between
-
-    int *matDP = WrapDP;  // Reuse WrapDP by renaming WrapDP by oneDP
-    int next = rep_period + 1;
+    int *rep;
+    rep = &orgInputString[query_start];
+    int rep_len = query_end - query_start + 1;
     
-    for(int l = query_start; l < query_end; ){
-        // Perform a global alignment
-        // i scans the reference starting from a_rep_unit_string.
-        // j scans from position l in oneInputString.
-        
-        for(int i=0; i < 2*next*next; i++){ matDP[i] = 0;}
-        
-        // Initialize the boundaries
-        for(int i = 0; i <= rep_period; i++){
-            //matDP[ i * next + 0] = 0;
-            matDP[ i * next + 0] = (-1) * INDEL_PENALTY * i;
-        }
-        for(int j = 0; j <= 2*rep_period; j++){
-            matDP[ 0 * next + j] = 0;
-            //matDP[ 0 * next + j] = (-1) * INDEL_PENALTY * j;
-        }
-        
-        // Inductive step
-        for(int i = 0; i < rep_period; i++){
-            for(int j = 0; j < rep_period*2 && l+j < query_end; j++ ){
-                // Search 2*rep_period positions
-                int gain_or_penalty;
-                if( a_rep_unit_string[ i ] == orgInputString[ l+j ]){
-                    gain_or_penalty = MATCH_GAIN;
-                }else{
-                    gain_or_penalty = (-1) * MISMATCH_PENALTY;
-                }
-                     matDP[ (i+1) * next +(j+1)] =
-                MAX( matDP[  i    * next + j ]     + gain_or_penalty,
-                MAX( matDP[ (i+1) * next + j ]     - INDEL_PENALTY,
-                     matDP[  i    * next +(j+1) ]  - INDEL_PENALTY ) );
-            }
-        }
-        
-        int max_matDP = 0;
-        int max_i = 0;
-        int max_j = 0;
-        for(int i = 0; i <= rep_period; i++){
-            for(int j = 0; j <= 2*rep_period && l+j < query_end; j++ ){
-                if( max_matDP < matDP[ i * next + j ] )
-                {
-                    max_matDP = matDP[ i * next + j ];
-                    max_i = i;
-                    max_j = j;
-                }
-            }
-        }
+    int i, j;
+    int next = unit_len+1;
 
-
-#ifdef DEBUG_progressive_multiple_alignment
-        printf("l = %i,\tmax_j = %i\n", l, max_j);
-#endif
-        if(max_j == 0 || max_matDP < 0){ break; }
-        // No meaningful alignments are obtained.
-
-        
-#ifdef DEBUG_progressive_multiple_alignment
-        printf("l, max_j, matDP = %i %i %i\n", l, max_j, max_matDP );
-#endif
-        
-        // traceback and revise the consensus alignment
-        int max_val = matDP[ max_i * next + max_j ];
-        int i = max_i - 1;
-        int j = max_j - 1;
-        // max_val is assumed to be matDP[ (i+1) * next + (j+1) ]
-        while( i >= 0 && j >= 0){
-            if( i >= 0 && j >= 0 &&
-                matDP[ i * next + j ] + MATCH_GAIN == max_val)
-            {
-                consensus[i][orgInputString[ l+j ]]++;
-                max_val -= MATCH_GAIN;
-                i--; j--;
-            }else if( i >= 0 && j >= 0 &&
-                matDP[ i * next + j ] - MISMATCH_PENALTY == max_val)
-            {
-                consensus[i][orgInputString[ l+j ]]++;
-                max_val += MISMATCH_PENALTY;
-                i--; j--;
-            }else if( j >= 0 &&
-                matDP[ (i+1) * next + j ] - INDEL_PENALTY  == max_val)
-            {   // Insert a base after the i-th position
-                gaps[i+1][orgInputString[ l+j ]]++;
-                max_val += INDEL_PENALTY;
-                j--;
-            }else if( i >= 0 &&
-                matDP[ i * next + (j+1) ] - INDEL_PENALTY == max_val)
-            {   // Delete the base at the i-th position
-                consensus[i][4]++;
-                max_val += INDEL_PENALTY;
-                i--;
-            }else{
-                fprintf(stderr, "fatal error in progressive multiple alignment DP at (i, j) = (%i %i)\n", i, j);
+    for(j=0; j<=rep_len; j++){   // Scan rep_unit
+        WrapDP[next*0 + j] = 0; // local alignment
+    }
+    
+    int max_wrd = 0;
+    int max_i = 0;
+    int max_j = 0;
+    int val_match, val_mismatch, val_insertion, val_deletion;
+    for(i=1; i <= rep_len; i++){      // Scan repeat
+        for(j=1; j<=unit_len; j++){   // Scan rep_unit
+            if( WrapDPsize <= next*i + j ){
+                fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
                 exit(EXIT_FAILURE);
             }
-        }
-        l = l + max_j;
-    }
-    
-    // Obtain the consensus string
-    // The current implementation is naive and needs improvement.
-    
-    int sum_max = 0;
-    for(int i=0; i < rep_period; i++){
-        int tmp_max = consensus[i][0];
-        for(int j=1; j<4; j++){
-            if(tmp_max < consensus[i][j]){
-                tmp_max = consensus[i][j];
+            if(rep[i] == rep_unit[j]){    // *1*-origin index !!!!
+                WrapDP[next*i + j] = WrapDP[next*(i-1) + j-1]  + MATCH_GAIN;
+            }else{
+                val_mismatch    = WrapDP[next*(i-1) + j-1]  - MISMATCH_PENALTY;
+                val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
+                if(j > 1){
+                    val_deletion = WrapDP[next*i + j-1] - INDEL_PENALTY;
+                    WrapDP[next*i + j] = MAX(0, MAX( MAX( val_mismatch, val_insertion), val_deletion));
+                }else{
+                    WrapDP[next*i + j] = MAX(0, MAX( val_mismatch, val_insertion));
+                }
             }
-        }
-        sum_max += tmp_max;
-    }
-    double avg_max = (double)sum_max / rep_period;
-                
-    int revised_rep_unit_string[MAX_PERIOD];
-
-    int revised_i = 0;
-    for(int i=0; i < rep_period; i++){
-        int max_j = 0;
-        int tmp_max = consensus[i][0];
-        for(int j=1; j<5; j++){
-            if(tmp_max < consensus[i][j]){
+            if(max_wrd < WrapDP[next*i + j])
+            {
+                max_wrd = WrapDP[next*i + j];
+                max_i = i;
                 max_j = j;
-                tmp_max = consensus[i][j];
             }
         }
-        revised_rep_unit_string[revised_i++] = max_j;
-        
-        int max_gap_j = 0;
-        tmp_max = gaps[i][0];
-        for(int j=1; j<4; j++){
-            if(tmp_max < gaps[i][j]){
-                max_gap_j = j;
-                tmp_max = gaps[i][j];
-            }
-        }
-        if(avg_max <= tmp_max){
-            revised_rep_unit_string[revised_i++] = max_gap_j;
-        }
+        // wrap around
+        WrapDP[next*i + 0] = WrapDP[next*i + unit_len];
     }
-        
-#ifdef DEBUG_progressive_multiple_alignment
-    printf("rep_period, sum_max, avg_max = %i %i %f\n", rep_period, sum_max, avg_max);
     
-    printf("Pred.\t");
-    for(int i=0; i<rep_period; i++){
-        printf("%i", a_rep_unit_string[i]);
-    }
-    printf("\nRevised\t");
-    for(int i=0; i<revised_i; i++){
-        printf("%i", revised_rep_unit_string[i]);
-    }
+    // trace back the optimal alignment while storing it in the data structure "alignment"
+    int consensus[MAX_PERIOD][5];   // 0-3 for A,C,G,T and 4 for a gap
+    int missing[MAX_PERIOD][4];        // 0-3 for A,C,G,T
         
-    printf("\nconsensus\n");
-    for(int j=0; j<5; j++){
-        printf("%i\t", j);
-        for(int i=0; i<rep_period; i++){
-            printf("%i", consensus[i][j]);
-        }
-        printf("\n");
+    for(int j=0; j<MAX_PERIOD; j++){
+        for(int q=0; q<5; q++){ consensus[j][q] = 0;   }
+        for(int q=0; q<4; q++){ missing[j][q] = 0;    }
     }
-        printf("gaps\n");
-    for(int j=0; j<4; j++){
-        printf("%i\t", j);
-        for(int i=0; i<rep_period; i++){
-            printf("%i", gaps[i][j]);
+    i = max_i;
+    j = max_j;
+    if(j == 0){ j = unit_len; } // 1-origin index
+    // global alignment
+    while(i > 0 && WrapDP[next*i + j] > 0){
+        val_match       = WrapDP[next*(i-1) + j-1]  + MATCH_GAIN;
+        val_mismatch    = WrapDP[next*(i-1) + j-1]  - MISMATCH_PENALTY;
+        val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
+        val_deletion    = WrapDP[next*i + j-1]      - INDEL_PENALTY;
+        
+        if( max_wrd == val_match          && rep[i] == rep_unit[j]){
+            consensus[j][rep[i]]++; // Increment the number of match rep[i]
+            max_wrd -= MATCH_GAIN;
+            i--; j--;
+        }else if( max_wrd == val_mismatch && rep[i] != rep_unit[j]){     // mismatch
+            consensus[j][rep[i]]++; // Increment the number of mismatch rep[i]
+            max_wrd += MISMATCH_PENALTY;
+            i--; j--;
+        }else if( max_wrd == val_deletion){
+            consensus[j][4]++;      // Increment the number of deletions from the representative
+            max_wrd += INDEL_PENALTY;
+            j--;
+        }else if( max_wrd == val_insertion){    // insertion
+            missing[j][rep[i]]++;      // Increment the number of the base missing from the representative
+            max_wrd += INDEL_PENALTY;
+            i--;
+        }else if( max_wrd == 0){
+            break;
+        }else{
+            fprintf(stderr, "fatal error in wrap-around DP max_wrd = %i\n", max_wrd);
+            exit(EXIT_FAILURE);
         }
-        printf("\n");
+        if(j == 0){
+            j = unit_len;
+        }
     }
+    
+    int revised_rep_unit[MAX_PERIOD];
+    int revised_rep_j = 0;  // 0-origin index
+    
+    int rep_unit_before[MAX_PERIOD];
+    int rep_unit_after[MAX_PERIOD];
+    int rep_j = 1;          // 1-origin index
+    for(int j=1; j<=unit_len; j++){ // 1-origin index
+        int max_v = -1;
+        int max_base = -1;
+        for(int q=0; q<5; q++){
+            if(max_v < consensus[j][q]){
+                max_v = consensus[j][q];
+                max_base = q;
+            }
+        }
+        rep_unit_before[rep_j] = rep_unit[j];
+        rep_unit_after[rep_j] = max_base;
+        rep_j++;
+        
+        if(max_base < 4){ // Non-gap
+            revised_rep_unit[revised_rep_j++] = max_base;
+        }
+        
+        max_v = -1;
+        int max_missing  = -1;
+        for(int q=0; q<4; q++){  // Assume that missing bases are between the first and last bases
+            if(max_v < missing[j][q]){  // If the max value is greater than the previous base...
+                max_v = missing[j][q];
+                max_missing = q;
+            }
+        }
+        //********************************************************
+        int coverage = rr->repeat_len / rr->rep_period;
+        if( 5 <= coverage && coverage <= 20 ){
+            double mismatch_ratio = (double)(rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
+            double indel_ratio = (double)(rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
+            //if( 4 <= max_v ){
+            if( min_missing(mismatch_ratio, coverage) <= max_v ){
+            //if( min_missing(indel_ratio, coverage) <= max_v ){
+                //printf("%f %i\t", mismatch_ratio, coverage);
+                rep_unit_before[rep_j] = 4;
+                rep_unit_after[rep_j] = max_missing;
+                rep_j++;
+                
+                revised_rep_unit[revised_rep_j++] = max_missing;
+            }
+        }
+    }
+    print_4_decimal_array(revised_rep_unit, revised_rep_j, rr->string);
+    
+    
+#ifdef DEBUG_revise_representative_unit
+    // revise_representative_unit(string, rep_period, rep_start, rep_end);
+    printf("\nRevision by multiple alignment\nbef\t");
+    for(int i = 1; i < rep_j; i++){
+        printf("%i", rep_unit_before[i]);
+    }
+    printf("\naft\t");
+    for(int i = 1; i < rep_j; i++){
+        printf("%i", rep_unit_after[i]);
+    }
+    printf("\nmat\t");
+    for(int i = 1; i < rep_j; i++){
+        if( rep_unit_before[i] == rep_unit_after[i] ){
+            printf(" ");
+        }else{
+            if(rep_unit_before[i] == 4){
+                printf("+");
+            }else if(rep_unit_after[i] == 4){
+                printf("-");
+            }else{
+                printf("x");
+            }
+        }
+    }
+    printf("\nrev\t");
+    for(int i = 0; i < revised_rep_j; i++){     // 0-origin index
+        printf("%i", revised_rep_unit[i]);
+    }
+    printf("\n");
 #endif
-
-/*
-    for(int i=0; i<revised_i; i++){
-        a_rep_unit_string[i] = revised_rep_unit_string[i];
-    }
-*/
+    
 }
+
+
 
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k){
     
@@ -598,7 +641,4 @@ void print_freq(int rep_start, int rep_end, int rep_period, char* string, int in
     }
     printf("\n");
 
-#ifdef DEBUG_progressive_multiple_alignment
-    revise_by_progressive_multiple_alignment(int_unit, rep_period, rep_start, rep_end, k);
-#endif
 }

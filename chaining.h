@@ -50,6 +50,7 @@ extern "C" {
     void search_max(int print_alignment);
     void delete_set_of_alignments();
     extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end);
+/*
     extern void revise_by_progressive_multiple_alignment(int* a_rep_unit_string, int rep_period, int query_start, int query_end, int k);
     extern void wrap_around_DP(
                                int *rep_unit, int unit_len,
@@ -58,6 +59,7 @@ extern "C" {
                                int *return_rep_len, int *return_freq_unit,
                                int *return_matches, int *return_mismatches,
                                int *return_insertions, int *return_deletions);
+ */
     extern void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
 }
 #endif

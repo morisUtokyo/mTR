@@ -60,19 +60,6 @@ char dec2char(int val){
     return(return_char);
 }
 
-void print_4_decimal_array(int* val, int len, char *return_string){
-    strcpy(return_string, "");
-    for(int i=0; i<len; i++){
-        switch(val[i]){
-            case 0: strcat(return_string, "A"); break;
-            case 1: strcat(return_string, "C"); break;
-            case 2: strcat(return_string, "G"); break;
-            case 3: strcat(return_string, "T"); break;
-            default: fprintf(stderr, "fatal error: input char %i", val[i]); exit(EXIT_FAILURE);
-        }
-    }
-}
-
 void freq_2mer_array(int* val, int len, int *freq_2mer){
     for(int i=0; i<16; i++){
         freq_2mer[i] = 0;
@@ -95,50 +82,31 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
     //---------------------------------------------------------------------------
     
+    strcpy( rr->readID, readID);
+    rr->inputLen = inputLen;
+    rr->Kmer     = k;
+    
+    search_De_Bruijn_graph(query_start, query_end, rr);
+    /*
     int rep_unit_string[MAX_PERIOD];
-    int rep_unit_score[MAX_PERIOD];
-    int predicted_rep_period, actual_rep_period;
+    search_De_Bruijn_graph(rep_unit_string, query_start, query_end, rr);
+    */
     
-    search_De_Bruijn_graph(rep_unit_string, rep_unit_score, query_start, query_end, inputLen, k, &predicted_rep_period, &actual_rep_period);
-    
-    if(actual_rep_period < MIN_PERIOD){ return;}
-
-    if(actual_rep_period * (query_end - query_start + 1) > WrapDPsize){
+    if(rr->rep_period < MIN_PERIOD){
+        return;
+    }else if(rr->rep_period * (query_end - query_start + 1) > WrapDPsize){
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
         clear_rr(rr);
-    }else if(actual_rep_period > 0){
-        int actual_start, actual_end, actual_repeat_len, Num_freq_unit, Num_matches, Num_mismatches, Num_insertions, Num_deletions;
+    }else{
+        wrap_around_DP(query_start, query_end, rr);
+        polish_repeat(rr);
         
-        wrap_around_DP(rep_unit_string,
-                       actual_rep_period,
-                       query_start,
-                       query_end,
-                       &actual_start,       &actual_end,
-                       &actual_repeat_len,  &Num_freq_unit,
-                       &Num_matches,        &Num_mismatches,
-                       &Num_insertions,     &Num_deletions);
-        
-        strcpy( rr->readID, readID);
-        rr->inputLen           = inputLen;
-        rr->rep_start          = actual_start;
-        rr->rep_end            = actual_end;
-        rr->repeat_len         = actual_repeat_len;
-        rr->rep_period         = actual_rep_period;
-        rr->predicted_rep_period = predicted_rep_period;
-        rr->Kmer               = k;
-        rr->Num_freq_unit      = 0;
-        rr->ConsensusMethod    = DeBruijnGraphSearch;
-        rr->Num_freq_unit      = Num_freq_unit;
-        rr->Num_matches        = Num_matches;
-        rr->Num_mismatches     = Num_mismatches;
-        rr->Num_insertions     = Num_insertions;
-        rr->Num_deletions      = Num_deletions;
-        
-        print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
-        for(int i=0; i<rr->rep_period; i++){
-            rr->string_score[i] = rep_unit_score[i];
+        //*************************************************************
+        int coverage = rr->repeat_len / rr->rep_period;
+        if( 5 <= coverage && coverage <= 20 && 10 < rr->rep_period){
+            revise_representative_unit(rr);
         }
-        freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
+        //wrap_around_DP(rr->rep_start, rr->rep_end, rr);
     }
 }
 
@@ -155,7 +123,7 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         max_k = maxKmer - 2;    // 9
     }else{                      // 5 - 11
         min_k = minKmer;
-        max_k = maxKmer;   
+        max_k = maxKmer;
     }
     
     int max_matches = -1;
@@ -242,8 +210,6 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
             if( RRs[0].repeat_len > 0 &&
                RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
             {
-                polish_repeat( &RRs[0], inputLen);
-                
                 insert_an_alignment(RRs[0]);
                 remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
             }
