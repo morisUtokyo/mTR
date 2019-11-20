@@ -473,8 +473,7 @@ void put_local_maximum_into_directional_index(int DI_array_length, int w){
 
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length){
     
-    struct timeval s_time, e_time;
-    gettimeofday(&s_time, NULL);
+
     
     // initialize directional _index
     for(int i=0; i<DI_array_length; i++){
@@ -515,6 +514,4 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         directional_index_w[i]  = -1;
     }
     
-    gettimeofday(&e_time, NULL);
-    time_range += (e_time.tv_sec - s_time.tv_sec) + (e_time.tv_usec - s_time.tv_usec)*1.0E-6;
 }

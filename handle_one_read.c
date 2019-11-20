@@ -86,11 +86,13 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
     rr->inputLen = inputLen;
     rr->Kmer     = k;
     
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
     search_De_Bruijn_graph(query_start, query_end, rr);
-    /*
-    int rep_unit_string[MAX_PERIOD];
-    search_De_Bruijn_graph(rep_unit_string, query_start, query_end, rr);
-    */
+    
+    gettimeofday(&e, NULL);
+    time_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
     if(rr->rep_period < MIN_PERIOD){
         return;
@@ -99,12 +101,19 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         clear_rr(rr);
     }else{
         wrap_around_DP(query_start, query_end, rr);
-        polish_repeat(rr);
         
         //*************************************************************
         int coverage = rr->repeat_len / rr->rep_period;
+        // Polish the repeat unit if it is short and its coverage is small.
+        // Otherwise, the coverage would be large enough.
         if( 5 <= coverage && coverage <= 20 && 10 < rr->rep_period){
+            gettimeofday(&s, NULL);
+            
+            polish_repeat(rr);
             revise_representative_unit(rr);
+            
+            gettimeofday(&e, NULL);
+            time_polish += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
         }
         //wrap_around_DP(rr->rep_start, rr->rep_end, rr);
     }
@@ -116,14 +125,13 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     int min_k, max_k;
     if(w < 100){
         min_k = minKmer - 3;    // 2
-        max_k = maxKmer - 6;    // 5
-        //max_k = maxKmer - 5;
+        max_k = maxKmer - 5;    // 6  The accuracy gets worse if this is set to 5.
     }else if(w < 1000){
-        min_k = minKmer;        // 5
+        min_k = minKmer - 3;    // 2
         max_k = maxKmer - 2;    // 9
-    }else{                      // 5 - 11
-        min_k = minKmer;
-        max_k = maxKmer;
+    }else{
+        min_k = minKmer;        // 5
+        max_k = maxKmer;        // 11
     }
     
     int max_matches = -1;
@@ -189,7 +197,13 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     }
     int DI_array_length = inputLen + random_string_length*2;
     
+    struct timeval s_time_range, e_time_range;
+    gettimeofday(&s_time_range, NULL);
+    
     fill_directional_index_with_end(DI_array_length, inputLen, random_string_length);
+    
+    gettimeofday(&e_time_range, NULL);
+    time_range += (e_time_range.tv_sec - s_time_range.tv_sec) + (e_time_range.tv_usec - s_time_range.tv_usec)*1.0E-6;
     
     //
     // Search for positions with tandem repeats
@@ -204,7 +218,9 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
             // Move onto de Bruijn graph construction
             clear_rr(&RRs[0]); clear_rr(&RRs[1]);
             int width     = directional_index_w[query_start];
+            
             find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
+            
             query_counter++;
             // Examine if a qualified TR is found
             if( RRs[0].repeat_len > 0 &&

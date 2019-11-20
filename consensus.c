@@ -169,8 +169,6 @@ void print_4_decimal_array(int* val, int len, char *return_string){
 
 void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
     
     int rep_unit_string[MAX_PERIOD];
     int rep_unit_score[MAX_PERIOD];
@@ -249,10 +247,7 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
         }
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
     }
-    
-    gettimeofday(&e, NULL);
-    time_search_De_Bruijn_graph
-    += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+
 }
 
 int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit, int width){
@@ -535,11 +530,11 @@ void revise_representative_unit( repeat_in_read *rr){
         if(max_base < 4){ // Non-gap
             revised_rep_unit[revised_rep_j++] = max_base;
         }
-        
+
         max_v = -1;
         int max_missing  = -1;
         for(int q=0; q<4; q++){  // Assume that missing bases are between the first and last bases
-            if(max_v < missing[j][q]){  // If the max value is greater than the previous base...
+            if(max_v < missing[j][q]){  // If the max value is greater than the previous base.
                 max_v = missing[j][q];
                 max_missing = q;
             }
@@ -548,15 +543,11 @@ void revise_representative_unit( repeat_in_read *rr){
         int coverage = rr->repeat_len / rr->rep_period;
         if( 5 <= coverage && coverage <= 20 ){
             double mismatch_ratio = (double)(rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
-            double indel_ratio = (double)(rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
-            //if( 4 <= max_v ){
+            //double indel_ratio = (double)(rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
             if( min_missing(mismatch_ratio, coverage) <= max_v ){
-            //if( min_missing(indel_ratio, coverage) <= max_v ){
-                //printf("%f %i\t", mismatch_ratio, coverage);
                 rep_unit_before[rep_j] = 4;
                 rep_unit_after[rep_j] = max_missing;
                 rep_j++;
-                
                 revised_rep_unit[revised_rep_j++] = max_missing;
             }
         }

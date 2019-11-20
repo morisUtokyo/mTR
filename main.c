@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     // Process one file to associate reads with tandem repeats
     time_all = 0; time_memory = 0; time_range = 0; time_period = 0;
     time_initialize_input_string = 0;
-    time_count_table = 0; time_search_De_Bruijn_graph = 0;
+    time_count_table = 0; time_search_De_Bruijn_graph = 0; time_polish = 0;
     time_wrap_around_DP = 0; time_chaining = 0;
     query_counter = 0;
     
@@ -84,7 +84,9 @@ int main(int argc, char *argv[])
     gettimeofday(&s, NULL);
 
     fprintf(stderr, "The input file name is %s.\n", inputFile);
+    
     int read_cnt = handle_one_file(inputFile, print_multiple_TR, print_alignment);
+    
     fprintf(stderr, "Number of reads is %i.\n", read_cnt);
     
     gettimeofday(&e, NULL);
@@ -100,6 +102,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
     fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
     fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
+    fprintf(stderr, "\t%f\tPolising the unit\n", time_polish);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
     fprintf(stderr, "\t%f\tchaining\n",   time_chaining);
     fprintf(stderr, "\t%i\tCount of queries\n", query_counter);
