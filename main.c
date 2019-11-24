@@ -75,7 +75,8 @@ int main(int argc, char *argv[])
     // Process one file to associate reads with tandem repeats
     time_all = 0; time_memory = 0; time_range = 0; time_period = 0;
     time_initialize_input_string = 0;
-    time_count_table = 0; time_search_De_Bruijn_graph = 0; time_polish = 0;
+    time_count_table = 0; time_search_De_Bruijn_graph = 0; time_init_search_De_Bruijn_graph = 0;
+    time_polish = 0;
     time_wrap_around_DP = 0; time_chaining = 0;
     query_counter = 0;
     
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "%f\tComputing periods\n", time_period);
     fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
     fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
-    fprintf(stderr, "\t%f\tDe Bruijn\n",     time_search_De_Bruijn_graph);
+    fprintf(stderr, "\t%f\tDe Bruijn (%f\tInitialization)\n",     time_search_De_Bruijn_graph,  time_init_search_De_Bruijn_graph);
     fprintf(stderr, "\t%f\tPolising the unit\n", time_polish);
     fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
     fprintf(stderr, "\t%f\tchaining\n",   time_chaining);

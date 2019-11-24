@@ -40,7 +40,7 @@ char base_int2char(int val){
         case 1: return('C');
         case 2: return('G');
         case 3: return('T');
-        default: fprintf(stderr, "fatal input char %i\n", val); exit(EXIT_FAILURE);
+        default: fprintf(stderr, "wrap_around base_int2char: fatal input char %i\n", val); exit(EXIT_FAILURE);
     }
 }
 
@@ -50,7 +50,7 @@ int base_char2int(char c){
         case 'C': return(1);
         case 'G': return(2);
         case 'T': return(3);
-        default: fprintf(stderr, "fatal input char %c", c); exit(EXIT_FAILURE);
+        default: fprintf(stderr, "wrap_around base_char2int: fatal input char %c\n", c); exit(EXIT_FAILURE);
     }
 }
 
@@ -64,7 +64,7 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
             case 'C': intBase = 1; break;
             case 'G': intBase = 2; break;
             case 'T': intBase = 3; break;
-            default: fprintf(stderr, "fatal input char %c\n", unit_string[i]);
+            default: fprintf(stderr, "base_char2int pretty print: fatal input char %c\n", unit_string[i]);
         }
         rep_unit[i+1] = intBase;    // Shift by 1 for *1*-origin index
     }
@@ -226,7 +226,7 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
             case 'C': intBase = 1; break;
             case 'G': intBase = 2; break;
             case 'T': intBase = 3; break;
-            default: fprintf(stderr, "fatal input char %c\n", rr->string[i]);
+            default: fprintf(stderr, "wrap_around_DP: fatal input char %c\n", rr->string[i]);
         }
         rep_unit[i+1] = intBase;  // Shift by 1 for *1*-origin index
     }

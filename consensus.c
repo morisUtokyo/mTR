@@ -169,16 +169,19 @@ void print_4_decimal_array(int* val, int len, char *return_string){
 
 void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
-    
     int rep_unit_string[MAX_PERIOD];
     int rep_unit_score[MAX_PERIOD];
     int inputLen = rr->inputLen;
     int k = rr->Kmer;
     
     // Generate the list of k-mers and search for the node with the maximum count
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
     init_inputString(k, query_start, query_end, inputLen);
     int width = query_end - query_start + 1;
     int maxNode = generate_freqNode_return_maxNode(query_start, query_end, k, width);
+    gettimeofday(&e, NULL);
+    time_init_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
     // de Bruijn graph search
     int initialNode = maxNode;
@@ -188,15 +191,21 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
     int list_tiebreaks[MAX_tiebreaks];
     int list_tiebreaks_new[MAX_tiebreaks];
     
-    for(int l=0; l< MAX_PERIOD; l++){
+    for(int l=0; l < MAX_PERIOD && l < (query_end - query_start)/MIN_NUM_FREQ_UNIT; l++){
+        // l must be smaller than the range of the query
         rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
-        
         rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
         
-        int m, lsd, max_lsd, max_count_lsd, init_tiebreaks, tiebreaks;
+        int m, lsd, max_lsd, max_count_lsd, init_tiebreaks, tiebreaks, max_lookahead;
         list_tiebreaks[0] = 0;
         init_tiebreaks = 1;
-        for(m = 1; m <= k; m++){    // look m bases ahead
+        // Look k bases ahead if the period is of >10 bases.
+        if( l < 10 ){
+            max_lookahead = 1;
+        }else{
+            max_lookahead = k;
+        }
+        for(m = 1; m <= max_lookahead; m++){    // look m bases ahead
             max_lsd = 0;
             max_count_lsd = -1;
             tiebreaks = 0;
@@ -204,14 +213,13 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
                 for(int j=0; j<4; j++){
                     lsd = 4 * list_tiebreaks[i] + j; // lsd: least significant (4) digit
                     int tmp_count = freq_node( pow4[m] * (Node % pow4[k-m]) + lsd, k, width );
-                    // int tmp_count = count[ pow4[m] * (Node % pow4[k-m]) + lsd ];
-                    
                     if( max_count_lsd < tmp_count){
                         max_count_lsd = tmp_count;
                         max_lsd = lsd;
                         tiebreaks = 0;
                         list_tiebreaks_new[tiebreaks++] = lsd;
                     }else if(max_count_lsd == tmp_count){ // Allow more tiebreaks
+                        //max_lsd = lsd;
                         if(tiebreaks < MAX_tiebreaks){
                             list_tiebreaks_new[tiebreaks++] = lsd;
                         }
@@ -228,19 +236,17 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
             }
         }
         Node = 4 * (Node % pow4[k-1]) + (max_lsd / pow4[m-1] ); // Shift by one base
-        if(Node == initialNode){     // Break if you hit the initial node.
+        if(Node == initialNode){
             actual_rep_period = l+1;
             break;
         }
     }
-    
-    rr->rep_period           = actual_rep_period;
-    rr->predicted_rep_period = actual_rep_period;
-    rr->ConsensusMethod      = DeBruijnGraphSearch;
-
-    if(rr->rep_period < MIN_PERIOD){
+    if(actual_rep_period < MIN_PERIOD){ // if actual_rep_period == 0, return NULL.
         return;
     }else{
+        rr->rep_period           = actual_rep_period;
+        rr->predicted_rep_period = actual_rep_period;
+        rr->ConsensusMethod      = DeBruijnGraphSearch;
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
         for(int i=0; i<rr->rep_period; i++){
             rr->string_score[i] = rep_unit_score[i];
@@ -295,7 +301,7 @@ void polish_repeat(repeat_in_read *rr){
             case 'C': int_unit[i]=1; break;
             case 'G': int_unit[i]=2; break;
             case 'T': int_unit[i]=3; break;
-            default: fprintf(stderr, "fatal input char %c", rr->string[i]); exit(EXIT_FAILURE);
+            default: fprintf(stderr, "polish_repeat: fatal input char %c\n", rr->string[i]); exit(EXIT_FAILURE);
         }
     }
     int rep_period = rr->rep_period;
@@ -415,7 +421,7 @@ void revise_representative_unit( repeat_in_read *rr){
             case 'C': rep_unit[i+1] = 1; break;
             case 'G': rep_unit[i+1] = 2; break;
             case 'T': rep_unit[i+1] = 3; break;
-            default: fprintf(stderr, "fatal input char %c", string[i]); exit(EXIT_FAILURE);
+            default: fprintf(stderr, "revise rep: fatal input char %c\n", string[i]); exit(EXIT_FAILURE);
         }
     }
     
@@ -609,7 +615,7 @@ void print_freq(int rep_start, int rep_end, int rep_period, char* string, int in
             case 'C': int_unit[i]=1; break;
             case 'G': int_unit[i]=2; break;
             case 'T': int_unit[i]=3; break;
-            default: fprintf(stderr, "fatal input char %c", string[i]); exit(EXIT_FAILURE);
+            default: fprintf(stderr, "print_freq: fatal input char %c\n", string[i]); exit(EXIT_FAILURE);
         }
     }
     int int_Nodes[MAX_PERIOD];

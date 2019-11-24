@@ -184,13 +184,14 @@ public:
 		score += a->score;
 	}
     
+    /*
     int char2int(char c){
         switch(c){
             case 'A': return(0);
             case 'C': return(1);
             case 'G': return(2);
             case 'T': return(3);
-            default: fprintf(stderr, "fatal input char %c", c);
+            default: fprintf(stderr, "chaining char2int: fatal input char %c\n", c);
         }
     }
     
@@ -281,12 +282,6 @@ public:
                     
                     for(int i=0; i<rep_period; i++){ a_rep_unit[i] = char2int(string[i]); }
                     
-                    /*
-                    wrap_around_DP(a_rep_unit, actual_rep_period,
-                                   query_start, query_end,
-                                   &rep_start, &rep_end, &repeat_len, &Num_freq_unit,
-                                   &Num_matches, &Num_mismatches, &Num_insertions, &Num_deletions);
-                    */
                     predecessor = maximimal->predecessor;
                     //print_one_TR(0);
                     
@@ -304,6 +299,7 @@ public:
             }
         }
     }
+     */
 };
 
 set<Alignment*> set_of_alignments;
@@ -467,7 +463,7 @@ void chaining(int print_alignment){
     
     // Print the maximum chain
     // Concatenate fragmented alignmnets of an identical tandem repeat
-    (sorted_by_Y.rbegin())->second->concatenate_similar_alignments();
+    //(sorted_by_Y.rbegin())->second->concatenate_similar_alignments();
     
 #ifdef DEBUG_chaining
     (sorted_by_Y.rbegin())->second->print_chain();

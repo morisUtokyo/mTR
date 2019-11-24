@@ -43,7 +43,7 @@ void print_4_decimals(int val, int len){
             case 1: printf("C"); break;
             case 2: printf("G"); break;
             case 3: printf("T"); break;
-            default: fprintf(stderr, "fatal input char %i", val%4); exit(EXIT_FAILURE);
+            default: fprintf(stderr, "handle_one_read: fatal input char %i\n", val%4); exit(EXIT_FAILURE);
         }
     }
 }
@@ -55,7 +55,7 @@ char dec2char(int val){
         case 1: return_char = 'C'; break;
         case 2: return_char = 'G'; break;
         case 3: return_char = 'T'; break;
-        default: fprintf(stderr, "fatal input char %i", val); exit(EXIT_FAILURE);
+        default: fprintf(stderr, "handle_one_read: fatal input char %i\n", val); exit(EXIT_FAILURE);
     }
     return(return_char);
 }
@@ -101,21 +101,20 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         clear_rr(rr);
     }else{
         wrap_around_DP(query_start, query_end, rr);
-        
-        //*************************************************************
-        int coverage = rr->repeat_len / rr->rep_period;
         // Polish the repeat unit if it is short and its coverage is small.
         // Otherwise, the coverage would be large enough.
+        int coverage = rr->repeat_len / rr->rep_period;
         if( 5 <= coverage && coverage <= 20 && 10 < rr->rep_period){
             gettimeofday(&s, NULL);
             
             polish_repeat(rr);
             revise_representative_unit(rr);
+            //wrap_around_DP(query_start, query_end, rr);
             
             gettimeofday(&e, NULL);
             time_polish += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
         }
-        //wrap_around_DP(rr->rep_start, rr->rep_end, rr);
+        
     }
 }
 
