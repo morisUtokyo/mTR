@@ -219,7 +219,6 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
                         tiebreaks = 0;
                         list_tiebreaks_new[tiebreaks++] = lsd;
                     }else if(max_count_lsd == tmp_count){ // Allow more tiebreaks
-                        //max_lsd = lsd;
                         if(tiebreaks < MAX_tiebreaks){
                             list_tiebreaks_new[tiebreaks++] = lsd;
                         }
@@ -258,12 +257,12 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
 
 int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit, int width){
     
+    // Return the sum of the frequencies of the l-mers with the nucleotide at the "start" position
     int tmpNode = bestNode;
     int sumFreq = 0;
     for( int j = start; start - k < j; j--){ // wrap around
         tmpNode = int_unit[ j%rep_period ] * pow4[k-1] + (tmpNode / 4) ;
         sumFreq += freq_node(tmpNode, k, width);
-        //sumFreq += count[tmpNode];
     }
     return(sumFreq);
 }
@@ -377,8 +376,20 @@ void polish_repeat(repeat_in_read *rr){
     rr->string[rr->rep_period] = '\0';
 }
 
-// Columns from the top represent mismatch ratios: 0.25, 0.2, 0.15, 0.1, 0.05, and 0.02.
+// Columns from the top represent mismatch ratios: 0.25, 0.2, 0.15, 0.1, 0.05, and 0.025.
 // Rows are read coverages that range from 0 to 20.
+// p/4, significance 0.05/200
+int min_missing_bases[6][21] = {
+    0,1,2,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,
+    0,1,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6,
+    0,1,2,2,2,3,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5,
+    0,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,
+    0,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,
+    0,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
+};
+
+// p, significance 0.05
+/*
 int min_missing_bases[6][21] = {
     0,1,2,2,3,3,3,4,4,4,5,5,6,6,6,7,7,7,8,8,8,
     0,1,1,2,2,3,3,3,4,4,4,5,5,5,5,6,6,6,7,7,7,
@@ -387,6 +398,19 @@ int min_missing_bases[6][21] = {
     0,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,3,3,3,3,
     0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2
 };
+ */
+/*
+// p/4, significance 0.05/400
+int min_missing_bases[6][21] = {
+    0,1,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,7,
+    0,1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6,
+    0,1,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,
+    0,1,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,
+    0,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,
+    0,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3
+};
+*/
+
 
 int min_missing(double ratio, int coverage){
     int col, row;
@@ -515,10 +539,10 @@ void revise_representative_unit( repeat_in_read *rr){
     }
     
     int revised_rep_unit[MAX_PERIOD];
-    int revised_rep_j = 0;  // 0-origin index
-    
     int rep_unit_before[MAX_PERIOD];
     int rep_unit_after[MAX_PERIOD];
+    int revised_rep_j = 0;  // 0-origin index
+
     int rep_j = 1;          // 1-origin index
     for(int j=1; j<=unit_len; j++){ // 1-origin index
         int max_v = -1;
