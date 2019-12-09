@@ -4,6 +4,7 @@
 //
 //  Created by Kazuki Ichikawa
 //
+#include <random>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -12,7 +13,6 @@
 #include <strstream>
 #include <vector>
 #include <sstream>
-#include <random>
 
 using namespace std;
 
@@ -45,7 +45,7 @@ string rand_string()
 	return tmp_s;
 }
 
-void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int block, int mis_rate, int ins_rate, int del_rate, int pre, int post, int loop)
+void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int block, double mis_rate, double ins_rate, double del_rate, int pre, int post, int loop)
 {
 	random_device rnd;
     mt.seed(rnd()); 
@@ -55,8 +55,6 @@ void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int 
 	int mis_n = (int)round(((double)(rep_length * block * mis_rate)/100));
 	int ins_n = (int)round(((double)(rep_length * block * ins_rate)/100));
 	int del_n = (int)round(((double)(rep_length * block * del_rate)/100));
-	
-	//cout << mis_n << "	" << ins_n << "	" << del_n << endl;
 	
 	ofstream ofs;
 	ofs.open(out_name);
@@ -170,8 +168,7 @@ void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int 
 				break;
 			}
 		}
-		
-		
+				
 		ofs2 << line << endl;
 
 		int rep_total = 0;
@@ -184,7 +181,6 @@ void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int 
 			{
 				if(error_row[rep_total] == 1)
 				{
-					//cout << "cause error " << N << endl;
 					string mis;
 					while(1)
 					{
@@ -199,7 +195,6 @@ void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int 
 				}
 				else if(error_row[rep_total] == 2)
 				{
-					//cout << "cause ins " << N << endl;
 					ofs << tmp[j];
 					ofs << rand_string();
 					N++;
@@ -207,7 +202,6 @@ void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int 
 				}
 				else if(error_row[rep_total] == 3)
 				{
-					//cout << "cause del " << N << endl;
 				}
 				else
 				{
@@ -229,6 +223,5 @@ void rand_fasta(const char* out_name, const char* rep_name, int rep_length, int 
 
 int main(int argc, char** argv)
 {
-	rand_fasta(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), atoi(argv[7]), atoi(argv[8]), atoi(argv[9]), atoi(argv[10]));
+	rand_fasta(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]), atof(argv[5]), atof(argv[6]), atof(argv[7]), atoi(argv[8]), atoi(argv[9]), atoi(argv[10]));
 }
-

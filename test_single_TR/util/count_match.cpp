@@ -24,7 +24,7 @@ public:
 	int ID;
 	int length, start, end, rep_length, unit_length, unit_num;
 	string seq;
-	int match, mismatch, ins, del, kmer, method;
+	int match, mismatch, ins, del;
 	double match_ratio;
 };
 
@@ -55,6 +55,9 @@ void read_out(const char* filename, vector<string> rep_row)
 	fin.open(filename); 
 	if (!fin){ cout << "error : file not found" << endl; exit(1); } // if fin==0  file not exist
 	
+	int NA_num = 0;
+	int same = 0;
+
 	int count = 0;
 	
 	vector<int> perfect_row;
@@ -81,34 +84,27 @@ void read_out(const char* filename, vector<string> rep_row)
 		
 		stringstream buf(line);
 		
-		buf >> n_reads.ID >> n_reads.length >> n_reads.start >> n_reads.end >> n_reads.rep_length >> n_reads.unit_length >> n_reads.unit_num >> n_reads.match >> n_reads.match_ratio >> n_reads.mismatch >> n_reads.ins >> n_reads.del >>  n_reads.kmer >> n_reads.method >> n_reads.seq;
+		buf >> n_reads.ID >> n_reads.length >> n_reads.start >> n_reads.end >> n_reads.rep_length >> n_reads.unit_length >> n_reads.unit_num >> n_reads.match >> n_reads.match_ratio >> n_reads.mismatch >> n_reads.ins >> n_reads.del >> n_reads.seq;
+		
+		bool match = false;
 
-		string double_sequence;
-		double_sequence = rep_row[n_reads.ID] + rep_row[n_reads.ID];
-		
-		int max = 0;
-		
-		for(int i=0; i<(int)double_sequence.size(); i++)
+		if(((int)rep_row[n_reads.ID].size() == (int)n_reads.seq.size()))
 		{
-			int match = 0;
-			
-			for(int j=0; j<(int)n_reads.seq.size(); j++)
+			int length = (int)rep_row[n_reads.ID].size();
+
+			for(int i=0; i<length; i++)
 			{
-				if(i+j < (int)double_sequence.size())
+				string suf = rep_row[n_reads.ID].substr(i, length - i);
+				string pre = rep_row[n_reads.ID].substr(0, i);
+				string new_s = suf + pre;
+
+				if(n_reads.seq == new_s)
 				{
-					if(double_sequence[i + j] == n_reads.seq[j])
-					match++;
+					match = true;
+					perfect_row[n_reads.ID] = 1;
+					break;
 				}
 			}
-			if(max < match)
-			{
-				max = match;
-			}
-		}
-		
-		if(max == (int)rep_row[n_reads.ID].size())
-		{
-			perfect_row[n_reads.ID] = 1;
 		}
 	}
 	
@@ -121,8 +117,8 @@ void read_out(const char* filename, vector<string> rep_row)
 			count_p_all++;
 		}
 	}
-	
-	cout << count_p_all << endl;
+
+    cout << count_p_all << endl;	
 }
 
 int main(int argc, char** argv)
@@ -130,4 +126,3 @@ int main(int argc, char** argv)
 	vector<string> rep_row = read_repeat(argv[2]);
 	read_out(argv[1], rep_row);
 }
-
