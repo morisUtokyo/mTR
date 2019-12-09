@@ -110,7 +110,26 @@ public:
     
     void print_one_TR(int print_alignment)const{
         
-    printf(
+        printf(
+           "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
+           readID,
+           inputLen,
+           rep_start,
+           rep_end,
+           repeat_len,
+           rep_period,
+           Num_freq_unit,
+           Num_matches,
+           (float)Num_matches/repeat_len,
+           Num_mismatches,
+           Num_insertions,
+           Num_deletions,
+           //Kmer,
+           //ConsensusMethod,
+           string
+        );
+        /*
+        printf(
            "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
            readID,
            inputLen,
@@ -127,7 +146,8 @@ public:
            Kmer,
            ConsensusMethod,
            string
-           );
+        );
+         */
         
 #ifdef DEBUG_unit_score
     printf("\n\t%s", string);

@@ -24,8 +24,6 @@ Match ratio   Ratio of the number of matches to the length of actual repeat dete
 Mismacthes  Number of mismatches
 Insertions      Number of insertions
 Deletions       Number of deletions
-Kmer             Kmer used for calculating the actual repeat
-Method         Method for computing the repeat unit: De Bruijn graph search (1) or progressive multiple alignment (0)
 unit string
 
 
@@ -42,8 +40,6 @@ Match ratio = 0.8015
 Mismacthes = 137,
 Insertions  = 101,
 Deletions  = 74,
-Kmer  = 7,
-Method   = De Bruijn graph (1) or Progressive multiple alignment (0)
 unit string = GTGACCCCGCGGTAGCATAGCGGCTGAATGCCAGATACACATGTCAAGTCGTGGTGGCCCCGGTACTGGCTTCCGAGGCTGTAGAAAACCTATTCCCAGCG,
 
 
