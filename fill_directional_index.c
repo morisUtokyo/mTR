@@ -488,9 +488,9 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         
         int max_w;
         if(k == 1){
-            max_w = 40;
+            max_w = 20; //40;
         }else if(k == 3){
-            max_w = 640;
+            max_w = 80; //640;
         }else{
             max_w = MAX_WINDOW;
         }
