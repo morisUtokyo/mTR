@@ -482,10 +482,18 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
     }
 
     // Fill directional index
-    for(int k=3; k<=5; k+=2){
+    for(int k=1; k<=5; k+=2){
+        // Setting k=1 is useful in increasing the accuracy to handle 2mers of frequency ~10
         int min_w = MIN_WINDOW;
-        int max_w = MAX_WINDOW;     // k==5
-        if(k==3){ max_w = 100; }
+        
+        int max_w;
+        if(k == 1){
+            max_w = 40;
+        }else if(k == 3){
+            max_w = 640;
+        }else{
+            max_w = MAX_WINDOW;
+        }
         
         init_inputString_surrounded_by_random_seq(k, inputLen, random_string_length);
         // Put random sequences of the input length before and after the input string
