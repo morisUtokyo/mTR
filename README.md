@@ -11,10 +11,6 @@ usage: mTR [-acp] [-m ratio] <fasta file name>
 
 -p: Use Pearson's correlation coefficient distance in place of Manhattan distance.
 
-Command examples:
-mTR   <fasta file>        Multiple tandem repeats
-mTR -p  <fasta file>    Multiple tandem repeats
-
 /*-----------------------------------------
 Features associated with one read with repeats
 
