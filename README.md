@@ -11,17 +11,21 @@ usage: mTR [-acp] [-m ratio] <fasta file name>
 
 -p: Use Pearson's correlation coefficient distance in place of Manhattan distance.
 
-
-/*-----------------------------------------
+--------------------------------------------------------------------------
 
 Features associated with one read with repeats
 
 read identifier
+
 read length
+
 repeat start position
+
 repeat end position
+
 repeat length
-unit length    
+
+unit length
 
 number of unit occurrences 
 
@@ -36,6 +40,8 @@ Insertions      Number of insertions
 Deletions       Number of deletions
 
 unit string
+
+--------------------------------------------------------------------------
 
 
 Example
