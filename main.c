@@ -33,44 +33,61 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include "mTR.h"
 
 void print_error_message(){
-    fprintf(stderr, "mTR [-p] <file name> \n");
-    fprintf(stderr, "-p: Output the alignment between the input sequence and predicted tandem repeat. \n");
-    //fprintf(stderr, "mTR [-msp] <file name> \n");
-    //fprintf(stderr, "-m: Output multiple tandem repeats (default setting). \n");
-    //fprintf(stderr, "-s: Output the longest tandem repeat. \n");
-    //fprintf(stderr, "-p: Output the alignment between the input sequence and predicted tandem repeat. \n");
+    fprintf(stderr, "mTR [-acp] [-m ratio] <fasta file name> \n");
+    fprintf(stderr, "-a: Output the alignment between the input sequence and predicted tandem repeat. \n");
+    fprintf(stderr, "-c: Print the computation time of each step.\n");
+    fprintf(stderr, "-m ratio: Give a minimum match ratio ranging from 0 to 1.\n");
+    fprintf(stderr, "-p: Use Pearson's correlation coefficient distance in place of Manhattan distance.\n");
 }
 
 int main(int argc, char *argv[])
 {
     char *inputFile;
     MIN_MAX_DI = 0;
-    int print_multiple_TR = 1;
-    int print_alignment   = 0;
-    if(argc == 2){
-        print_multiple_TR = 1;
-        inputFile = argv[1];
-    }else if(argc == 3){
-        char *p;
-        p=argv[1];
-        if(*p == '-' ){
-            for(p++; *p != '\0'; p++){
-                switch(*p){
-                    case 's':   print_multiple_TR = 0;  break;
-                    case 'm':   print_multiple_TR = 1;  break;
-                    case 'p':   print_alignment   = 1;  break;
-                    default:    break; // multiple mode
+
+    // default parameters
+    int print_computation_time = 0;
+    min_match_ratio = MIN_MATCH_RATIO;
+    int print_alignment = 0;
+    Manhattan_Distance = 1;
+    
+    int opt;
+    while ((opt = getopt(argc, argv, "acm:p")) != -1) {
+        switch(opt){
+            case 'a':
+                print_alignment = 1;
+                break;
+            case 'c':
+                print_computation_time = 1;
+                break;
+            case 'm':
+                min_match_ratio = atof(optarg);
+                //fprintf(stderr, "The input minimum match ratio is %f.\n", min_match_ratio);
+                if(0 <= min_match_ratio && min_match_ratio <=1){
+                    break;
+                }else{
+                    fprintf(stderr, "The input minimum match ratio must range from 0 to 1.\n", min_match_ratio);
+                    exit(EXIT_FAILURE);
                 }
-            }
+            case 'p':
+                Manhattan_Distance = 0;
+                fprintf(stderr, "Pearson's correlation coefficient distance in place of Manhattan distance.\n");
+                break;
+            default:
+                print_error_message();
+                exit(EXIT_FAILURE);
         }
-        inputFile = argv[2];
-    }else{
-        print_error_message();
+    }
+    if (optind >= argc) {
+        fprintf(stderr, "The input file name is expected argument after options\n");
         exit(EXIT_FAILURE);
     }
+    inputFile = argv[optind];
+    //fprintf(stderr, "The input file name is %s.\n", inputFile);
     
     // Process one file to associate reads with tandem repeats
     time_all = 0; time_memory = 0; time_range = 0; time_period = 0;
@@ -83,32 +100,28 @@ int main(int argc, char *argv[])
     
     struct timeval s, e;
     gettimeofday(&s, NULL);
-
-    fprintf(stderr, "The input file name is %s.\n", inputFile);
     
+    int print_multiple_TR = 1;
     int read_cnt = handle_one_file(inputFile, print_multiple_TR, print_alignment);
-    
-    fprintf(stderr, "The number of processed reads is %i.\n", read_cnt);
+    //fprintf(stderr, "The number of processed reads is %i.\n", read_cnt);
     
     gettimeofday(&e, NULL);
     time_all = (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
-#ifdef PRINT_COMP_TIME
-    fprintf(stderr, "Computational time\n");
-    fprintf(stderr, "%f\tall\n",           time_all);
-    fprintf(stderr, "%f\tallocating memory\n", time_memory);
-    fprintf(stderr, "%f\tranges\n",         time_range);
-    
-    fprintf(stderr, "%f\tComputing periods\n", time_period);
-    fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
-    fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
-    fprintf(stderr, "\t%f\tDe Bruijn (%f\tInitialization)\n",     time_search_De_Bruijn_graph,  time_init_search_De_Bruijn_graph);
-    fprintf(stderr, "\t%f\tPolising the unit\n", time_polish);
-    fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
-    fprintf(stderr, "\t%f\tchaining\n",   time_chaining);
-    fprintf(stderr, "\t%i\tCount of queries\n", query_counter);
-#endif
-
-    
+    if(print_computation_time){
+        fprintf(stderr, "Computation time\n");
+        fprintf(stderr, "%f\tall\n",           time_all);
+        fprintf(stderr, "%f\tallocating memory\n", time_memory);
+        fprintf(stderr, "%f\tranges\n",         time_range);
+        
+        fprintf(stderr, "%f\tComputing periods\n", time_period);
+        fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
+        fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
+        fprintf(stderr, "\t%f\tDe Bruijn (%f\tInitialization)\n",     time_search_De_Bruijn_graph,  time_init_search_De_Bruijn_graph);
+        fprintf(stderr, "\t%f\tPolising the unit\n", time_polish);
+        fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
+        fprintf(stderr, "\t%f\tchaining\n",   time_chaining);
+        fprintf(stderr, "\t%i\tCount of queries\n", query_counter);
+    }
     return EXIT_SUCCESS;
 }

@@ -499,11 +499,11 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         // Put random sequences of the input length before and after the input string
         for(int w = min_w; w <= max_w && w < inputLen/2; w = 2 * w)
         {
-#ifdef Manhattan_Distance
-            fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
-#else
-            fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
-#endif
+            if(Manhattan_Distance == 1){
+                fill_directional_index_Manhattan( DI_array_length, w, k, inputLen, random_string_length);
+            }else{
+                fill_directional_index_PCC( DI_array_length, w, k, inputLen, random_string_length);
+            }
             put_local_maximum_into_directional_index( DI_array_length, w );
         }
     }

@@ -29,7 +29,9 @@
 
 // Key default parameters
 #define MAX_INPUT_LENGTH 1000000 // The maximum length of each read
+int Manhattan_Distance;         // The default setting is 1 in the main.
 #define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
+float min_match_ratio;
 #define MIN_PERIOD 2            // Minimum period length
 #define MAX_PERIOD 500          // Maximum period length
 #define MAX_PERIOD_FREQ 100     // The maximum frequency threshold for revising missing bases
@@ -143,8 +145,6 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 int query_counter;
 
 // For debugging with #ifdef
-#define Manhattan_Distance
-//#define PRINT_COMP_TIME
 
 //#define DEBUG_unit_score
 //#define DEBUG_revise_representative_unit

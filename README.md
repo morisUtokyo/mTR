@@ -1,9 +1,12 @@
 # mTR
 Use Makefile to generate an executable file "mTR".
 
-usage: mTR [-p] <file name>
+usage: mTR [-acp] [-m ratio] <fasta file name> 
 
--p:     Output the alignment between the input sequence and predicted tandem repeat.
+-a: Output the alignment between the input sequence and predicted tandem repeat.
+-c: Print the computation time of each step.
+-m ratio: Give a minimum match ratio ranging from 0 to 1.
+-p: Use Pearson's correlation coefficient distance in place of Manhattan distance.
 
 Command examples:
 mTR   <fasta file>        Multiple tandem repeats

@@ -140,7 +140,7 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         find_tandem_repeat_sub(query_start, query_end, readID, inputLen, k, rr);
         
         if( max_matches < rr->Num_matches &&
-           MIN_MATCH_RATIO < (float)rr->Num_matches/rr->repeat_len &&
+           min_match_ratio <= (float)rr->Num_matches/rr->repeat_len &&
            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
            MIN_PERIOD <= rr->rep_period )
         {
