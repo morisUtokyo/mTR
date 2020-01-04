@@ -1,7 +1,7 @@
 # mTR
 Use Makefile to generate an executable file "mTR".
 
-usage: mTR [-acp] [-m ratio] <fasta file name> 
+usage: mTR [-acp] [-m ratio] fasta file name 
 
 -a: Output the alignment between the input sequence and predicted tandem repeat.
 
