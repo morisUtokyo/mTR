@@ -16,16 +16,11 @@ usage: mTR [-acp] [-m ratio] <fasta file name>
 
 Features associated with one read with repeats
 
-read identifier        
-
-read length   
-
+read identifier
+read length
 repeat start position
-
-repeat end position 
-
-repeat length      
-
+repeat end position
+repeat length
 unit length    
 
 number of unit occurrences 
