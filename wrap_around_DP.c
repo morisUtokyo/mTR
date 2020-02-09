@@ -25,7 +25,7 @@
  The views and conclusions contained in the software and documentation are those
  of the authors and should not be interpreted as representing official policies,
  either expressed or implied, of the FreeBSD Project.
- */
+*/
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -327,7 +327,7 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     // Consider the 1-origin index carefully
     rr->rep_start           = query_start + i;
     rr->rep_end             = query_start + max_i - 1;
-    rr->repeat_len          = max_i - 1;
+    rr->repeat_len          = max_i - i; //max_i - 1;
     rr->Num_freq_unit       = (int)Num_scanned_unit/unit_len;
     rr->Num_matches         = Num_matches;
     rr->Num_mismatches      = Num_mismatches;
