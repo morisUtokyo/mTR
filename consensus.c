@@ -162,7 +162,7 @@ void print_4_decimal_array(int* val, int len, char *return_string){
             case 1: strcat(return_string, "C"); break;
             case 2: strcat(return_string, "G"); break;
             case 3: strcat(return_string, "T"); break;
-            default: fprintf(stderr, "fatal error: input char %i", val[i]); exit(EXIT_FAILURE);
+            default: fprintf(stderr, "fatal error: input char %i at %i (len=%i) in print_4_decimal_array\n", val[i], i, len); exit(EXIT_FAILURE);
         }
     }
 }
@@ -194,6 +194,12 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
     for(int l=0; l < MAX_PERIOD && l < (query_end - query_start)/MIN_NUM_FREQ_UNIT; l++){
         // l must be smaller than the range of the query
         rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
+        
+        if(3 < rep_unit_string[l]){
+            printf(stderr, "%i, Node = %i, k = %i\n", rep_unit_string[l], Node, k);
+            exit(EXIT_FAILURE);
+        }
+        
         rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
         
         int m, lsd, max_lsd, max_count_lsd, init_tiebreaks, tiebreaks, max_lookahead;
@@ -240,12 +246,14 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
             break;
         }
     }
-    if(actual_rep_period < MIN_PERIOD){ // if actual_rep_period == 0, return NULL.
+    if(actual_rep_period < MIN_PERIOD){
+        // if actual_rep_period == 0, return NULL.
         return;
     }else{
         rr->rep_period           = actual_rep_period;
         rr->predicted_rep_period = actual_rep_period;
         rr->ConsensusMethod      = DeBruijnGraphSearch;
+        
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
         for(int i=0; i<rr->rep_period; i++){
             rr->string_score[i] = rep_unit_score[i];
@@ -538,9 +546,10 @@ void revise_representative_unit( repeat_in_read *rr){
         }
     }
     
-    int revised_rep_unit[MAX_PERIOD];
-    int rep_unit_before[MAX_PERIOD];
-    int rep_unit_after[MAX_PERIOD];
+    // For handling the case when the period becomes more than MAX_PERIOD during the computation
+    int revised_rep_unit[MAX_PERIOD*2];
+    int rep_unit_before[MAX_PERIOD*2];
+    int rep_unit_after[MAX_PERIOD*2];
     int revised_rep_j = 0;  // 0-origin index
 
     int rep_j = 1;          // 1-origin index
@@ -574,7 +583,9 @@ void revise_representative_unit( repeat_in_read *rr){
         if( 5 <= coverage && coverage <= 20 ){
             double mismatch_ratio = (double)(rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
             //double indel_ratio = (double)(rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
-            if( min_missing(mismatch_ratio, coverage) <= max_v ){
+            if( min_missing(mismatch_ratio, coverage) <= max_v &&
+                0 <= max_missing && max_missing <= 3)
+            {
                 rep_unit_before[rep_j] = 4;
                 rep_unit_after[rep_j] = max_missing;
                 rep_j++;
