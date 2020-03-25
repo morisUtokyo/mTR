@@ -52,14 +52,12 @@ public:
     int     rep_end;
     int     repeat_len;
     int     rep_period;
-    int     predicted_rep_period;
     int     Num_freq_unit;
     int     Num_matches;
     int     Num_mismatches;
     int     Num_insertions;
     int     Num_deletions;
     int     Kmer;
-    int     ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
     char    string[MAX_PERIOD];
     int     string_score[MAX_PERIOD];
 
@@ -69,14 +67,12 @@ public:
               int   a_rep_end,
               int   a_repeat_len,
               int   a_rep_period,
-              int   a_predicted_rep_period,
               int   a_Num_freq_unit,
               int   a_Num_matches,
               int   a_Num_mismatches,
               int   a_Num_insertions,
               int   a_Num_deletions,
               int   a_Kmer,
-              int   a_ConsensusMethod,
               char* a_string,
               int*  a_string_score)
     {
@@ -94,14 +90,12 @@ public:
         rep_end     = a_rep_end;
         repeat_len  = a_repeat_len;
         rep_period  = a_rep_period;
-        predicted_rep_period = a_predicted_rep_period;
         Num_freq_unit   = a_Num_freq_unit;
         Num_matches     = a_Num_matches;
         Num_mismatches  = a_Num_mismatches;
         Num_insertions  = a_Num_insertions;
         Num_deletions   = a_Num_deletions;
         Kmer        = a_Kmer;
-        ConsensusMethod = a_ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
         strcpy( string, a_string );
         for(int i=0; i<rep_period; i++){
             string_score[i] = a_string_score[i]; }
@@ -124,30 +118,8 @@ public:
            Num_mismatches,
            Num_insertions,
            Num_deletions,
-           //Kmer,
-           //ConsensusMethod,
            string
         );
-        /*
-        printf(
-           "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%d\t%d\t%s\n",
-           readID,
-           inputLen,
-           rep_start,
-           rep_end,
-           repeat_len,
-           rep_period,
-           Num_freq_unit,
-           Num_matches,
-           (float)Num_matches/repeat_len,
-           Num_mismatches,
-           Num_insertions,
-           Num_deletions,
-           Kmer,
-           ConsensusMethod,
-           string
-        );
-         */
         
 #ifdef DEBUG_unit_score
     printf("\n\t%s", string);
@@ -331,14 +303,12 @@ void insert_an_alignment_into_set(
                       int   rep_end,
                       int   repeat_len,
                       int   rep_period,
-                      int   predicted_rep_period,
                       int   Num_freq_unit,
                       int   Num_matches,
                       int   Num_mismatches,
                       int   Num_insertions,
                       int   Num_deletions,
                       int   Kmer,
-                      int   ConsensusMethod,
                       char* string,
                       int*  string_score)
 {
@@ -350,14 +320,12 @@ void insert_an_alignment_into_set(
                             rep_end,
                             repeat_len,
                             rep_period,
-                            predicted_rep_period,
                             Num_freq_unit,
                             Num_matches,
                             Num_mismatches,
                             Num_insertions,
                             Num_deletions,
                             Kmer,
-                            ConsensusMethod,
                             string,
                             string_score));
 }

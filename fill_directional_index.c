@@ -54,7 +54,6 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->Num_insertions    = -1;
     rr_a->Num_deletions     = -1;
     rr_a->Kmer              = -1;
-    rr_a->ConsensusMethod     = -1;
 }
 
 void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
@@ -76,7 +75,6 @@ void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
     rr_a->Num_insertions    = rr_b->Num_insertions;
     rr_a->Num_deletions     = rr_b->Num_deletions;
     rr_a->Kmer              = rr_b->Kmer;
-    rr_a->ConsensusMethod   = rr_b->ConsensusMethod;
 }
 
 double DI_index(int *vector0, int *vector1, int *vector2, int k){
@@ -472,8 +470,6 @@ void put_local_maximum_into_directional_index(int DI_array_length, int w){
 
 
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length){
-    
-
     
     // initialize directional _index
     for(int i=0; i<DI_array_length; i++){

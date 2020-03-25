@@ -42,7 +42,7 @@ float min_match_ratio;
 
 // The following values are optimzed for a benchmark dataset.
 #define MIN_WINDOW 10 // 20  // Window size parameters for locating the boundaries of tandem repeats
-#define MAX_WINDOW 10240 //20480 //20000
+#define MAX_WINDOW 10240
 
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
@@ -110,10 +110,8 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     Num_insertions;
     int     Num_deletions;
     int     Kmer;
-    int     ConsensusMethod;     // 0 = progressive multiple alignment, 1 = De Bruijn graph search
     char    string[MAX_PERIOD];
     int     string_score[MAX_PERIOD];
-    int     predicted_rep_period;
     int     freq_2mer[16];
 } repeat_in_read;
 
@@ -130,7 +128,7 @@ void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multip
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
 void init_inputString(int k, int query_start, int query_end, int inputLen);
 
-void search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr);
+int search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr);
 void polish_repeat(repeat_in_read *rr);
 void revise_representative_unit( repeat_in_read *rr);
 void wrap_around_DP(int query_start, int query_end, repeat_in_read *rr);

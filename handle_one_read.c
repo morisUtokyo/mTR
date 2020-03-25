@@ -89,18 +89,20 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
     struct timeval s, e;
     gettimeofday(&s, NULL);
     
-    search_De_Bruijn_graph(query_start, query_end, rr);
+    int foundLoop = search_De_Bruijn_graph(query_start, query_end, rr);
     
     gettimeofday(&e, NULL);
     time_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
-    if(rr->rep_period < MIN_PERIOD){
+    if(foundLoop == 0){
+        clear_rr(rr);
         return;
     }else if(rr->rep_period * (query_end - query_start + 1) > WrapDPsize){
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
         clear_rr(rr);
     }else{
         wrap_around_DP(query_start, query_end, rr);
+        
         // Polish the repeat unit if it is short and its coverage is small.
         // Otherwise, the coverage would be large enough.
         int coverage = rr->repeat_len / rr->rep_period;
@@ -114,7 +116,6 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
             gettimeofday(&e, NULL);
             time_polish += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
         }
-        
     }
 }
 
@@ -135,6 +136,7 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     
     int max_matches = -1;
     clear_rr(tmp_rr);  // clear the space for the result
+    int ans_k;
     for(int k = min_k; k <= max_k; k++){
         clear_rr(rr);
         find_tandem_repeat_sub(query_start, query_end, readID, inputLen, k, rr);
@@ -146,9 +148,11 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         {
             max_matches = rr->Num_matches;
             assign_rr(tmp_rr, rr);
+            ans_k = k;
         }
     }
     assign_rr(rr, tmp_rr);
+    //if(rr->rep_period > 0){ fprintf(stderr, "----- k = %i, rep period = %i\n", ans_k, rr->rep_period);}
 }
 
 void insert_an_alignment(repeat_in_read rr){
@@ -159,14 +163,12 @@ void insert_an_alignment(repeat_in_read rr){
                                  rr.rep_end,
                                  rr.repeat_len,
                                  rr.rep_period,
-                                 rr.predicted_rep_period,
                                  rr.Num_freq_unit,
                                  rr.Num_matches,
                                  rr.Num_mismatches,
                                  rr.Num_insertions,
                                  rr.Num_deletions,
                                  rr.Kmer,
-                                 rr.ConsensusMethod,
                                  rr.string,
                                  rr.string_score
                                  );
@@ -188,12 +190,14 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     //
     // Locate overlapping regions of tandem repeats
     //
+    //int random_string_length = 10;
     int random_string_length;
     if(inputLen < MAX_WINDOW * 2){
         random_string_length = inputLen;
     }else{
         random_string_length = MAX_WINDOW * 2;
     }
+    
     int DI_array_length = inputLen + random_string_length*2;
     
     struct timeval s_time_range, e_time_range;

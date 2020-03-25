@@ -129,6 +129,105 @@ int generate_freqNode_return_maxNode(int query_start, int query_end, int k, int 
     return(maxNode);
 }
 
+int generate_freqNode_return_list_maxNodes(int query_start, int query_end, int k, int width, int *list_maxNodes, int *answer_maxFreq, int max_num_maxNodes){
+    
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
+    int Prime = nearPrime(width);
+    
+    int maxFreq, num_maxNodes;
+    
+    if(k <= count_maxKmer){     // 4^k
+        // Initialize the table
+        // memset(count, 0, pow4[k]*4);
+        for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
+        // Determine the maximum frequency, max_count
+        for(int i = query_start; i <= query_end; i++){
+            count[ inputString[i] ]++;
+        }
+        maxFreq = -1;
+        for(int i = query_start; i <= query_end; i++){
+            if( maxFreq < count[ inputString[i] ] ){
+                maxFreq = count[ inputString[i] ];
+            }
+        }
+        // List all nodes with the maximum frequency
+        num_maxNodes = 0;
+        for(int i = query_start; i <= query_end; i++){
+            if( maxFreq == count[ inputString[i] ] ){
+                list_maxNodes[num_maxNodes++] = inputString[i];
+                count[ inputString[i] ]--;
+                if(max_num_maxNodes <= num_maxNodes)
+                    break;
+            }
+        }
+    }else{
+        // Initialized the hash table
+        for(int i = 0; i < Prime; i++){
+            freqNode[i][0] = -1;    // no entry of Node
+            freqNode[i][1] = 0;     // reset the frequency to 0
+        }
+        // Determine the maximum frequency, maxFreq
+        maxFreq = -1;
+        int Node;
+        for(int i = query_start; i <= query_end; i++){
+            Node = inputString[i];
+            int h =  Node % Prime;     // a hash value of the node
+            for(int j=0; ; j++){
+                // j counts the number of trials
+                if(freqNode[h][0] == -1){
+                    // Found an empty entry
+                    freqNode[h][0] = Node;
+                    freqNode[h][1] = 1;
+                    break;
+                }else if(freqNode[h][0] == Node){
+                    // The node has been already put into the table. Increment the frequency.
+                    freqNode[h][1]++;
+                    break;
+                }else if(Prime <= j){
+                    fprintf(stderr, "The hash table for nodes is full.\n");
+                    exit(EXIT_FAILURE);
+                }else{
+                    // Move to the next entry
+                    h = (h+1) % Prime;
+                }
+            }
+            if( maxFreq < freqNode[h][1])
+                maxFreq = freqNode[h][1];
+        }
+        // List all nodes with the maximum frequency
+        num_maxNodes = 0;
+        for(int i = query_start; i <= query_end; i++){
+            Node = inputString[i];
+            int h =  Node % Prime;     // a hash value of the node
+            for(int j=0; ; j++){
+                if(freqNode[h][0] == Node){
+                    // The node has been already put into the table. Increment the frequency.
+                    if( maxFreq == freqNode[h][1] ){
+                        list_maxNodes[num_maxNodes++] = Node;
+                        freqNode[h][1]--;
+                    }
+                    break;
+                }else if(Prime <= j){
+                    fprintf(stderr, "The hash table for nodes is full.\n");
+                    exit(EXIT_FAILURE);
+                }else{
+                    // Move to the next entry
+                    h = (h+1) % Prime;
+                }
+            }
+            if(max_num_maxNodes <= num_maxNodes)
+                break;
+        }
+    }
+    gettimeofday(&e, NULL);
+    time_count_table += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
+    *answer_maxFreq = maxFreq;
+    return(num_maxNodes);
+}
+
 int freq_node(int Node, int k, int width){
     
     if(k <= count_maxKmer){
@@ -167,24 +266,15 @@ void print_4_decimal_array(int* val, int len, char *return_string){
     }
 }
 
-void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
+int search_De_Bruijn_graph_forward( int query_start, int query_end, int initialNode, int endNode, repeat_in_read *rr){
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
+    int width = query_end - query_start + 1;
     int rep_unit_string[MAX_PERIOD];
     int rep_unit_score[MAX_PERIOD];
     int inputLen = rr->inputLen;
     int k = rr->Kmer;
     
-    // Generate the list of k-mers and search for the node with the maximum count
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
-    init_inputString(k, query_start, query_end, inputLen);
-    int width = query_end - query_start + 1;
-    int maxNode = generate_freqNode_return_maxNode(query_start, query_end, k, width);
-    gettimeofday(&e, NULL);
-    time_init_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-    
     // de Bruijn graph search
-    int initialNode = maxNode;
     int Node = initialNode;
     int actual_rep_period = 0;
     for(int i = 0; i < MAX_PERIOD; i++){ rep_unit_string[i] = -1; }
@@ -194,13 +284,13 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
     for(int l=0; l < MAX_PERIOD && l < (query_end - query_start)/MIN_NUM_FREQ_UNIT; l++){
         // l must be smaller than the range of the query
         rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
-        
         if(3 < rep_unit_string[l]){
-            printf(stderr, "%i, Node = %i, k = %i\n", rep_unit_string[l], Node, k);
+            fprintf(stderr, "%i, Node = %i, k = %i\n", rep_unit_string[l], Node, k);
             exit(EXIT_FAILURE);
         }
         
         rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
+        //if(rep_unit_score[l] < 1){ return; }    // exit if Node is absent in the input string.
         
         int m, lsd, max_lsd, max_count_lsd, init_tiebreaks, tiebreaks, max_lookahead;
         list_tiebreaks[0] = 0;
@@ -218,8 +308,10 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
             for(int i=0; i < init_tiebreaks; i++){
                 for(int j=0; j<4; j++){
                     lsd = 4 * list_tiebreaks[i] + j; // lsd: least significant (4) digit
-                    int tmp_count = freq_node( pow4[m] * (Node % pow4[k-m]) + lsd, k, width );
-                    if( max_count_lsd < tmp_count){
+                    int tmpNode = pow4[m] * (Node % pow4[k-m]) + lsd;
+                    int tmp_count = freq_node( tmpNode, k, width );
+                    if( max_count_lsd < tmp_count)
+                    {
                         max_count_lsd = tmp_count;
                         max_lsd = lsd;
                         tiebreaks = 0;
@@ -241,27 +333,246 @@ void search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr)
             }
         }
         Node = 4 * (Node % pow4[k-1]) + (max_lsd / pow4[m-1] ); // Shift by one base
-        if(Node == initialNode){
+        if(Node == endNode){
             actual_rep_period = l+1;
             break;
         }
     }
+    rr->rep_period           = actual_rep_period;
+    
     if(actual_rep_period < MIN_PERIOD){
         // if actual_rep_period == 0, return NULL.
-        return;
+        return(0);
     }else{
-        rr->rep_period           = actual_rep_period;
-        rr->predicted_rep_period = actual_rep_period;
-        rr->ConsensusMethod      = DeBruijnGraphSearch;
-        
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
         for(int i=0; i<rr->rep_period; i++){
             rr->string_score[i] = rep_unit_score[i];
         }
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
+        return(1);
+    }
+}
+
+int search_De_Bruijn_graph_backward( int query_start, int query_end, int initialNode, int endNode, repeat_in_read *rr, int *subgoalNode, char *subgoalString){
+    
+    // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
+    int width = query_end - query_start + 1;
+    int rep_unit_string[MAX_PERIOD];
+    int rep_unit_score[MAX_PERIOD];
+    int inputLen = rr->inputLen;
+    int k = rr->Kmer;
+    
+    // de Bruijn graph search
+    int Node = initialNode;
+    int actual_rep_period = 0;
+    for(int i = 0; i < MAX_PERIOD; i++){ rep_unit_string[i] = -1; }
+/*
+    // A simple search without considering tiebreaks
+    for(int l=0; l < MAX_PERIOD && l < (query_end - query_start)/MIN_NUM_FREQ_UNIT; l++){
+        rep_unit_string[l] = Node % 4;  // Memorize the LAST base
+        rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
+        if(rep_unit_score[l] < 1){ return; }
+        int tmpNode, max_tmpNode, max_count_tmpNode;
+        max_tmpNode = 0;
+        max_count_tmpNode = -1;
+        for(int j = 0; j < 4; j++){
+            tmpNode = j * pow4[k-1] + Node/4; // msd: most significant (4) digit
+            int tmp_count = freq_node( tmpNode, k, width );
+            if( max_count_tmpNode < tmp_count)
+            {
+                max_count_tmpNode = tmp_count;
+                max_tmpNode = tmpNode;
+            }
+        }
+        Node = max_tmpNode; // use the maximum msd
+        if(Node == endNode){
+            actual_rep_period = l+1;
+            break;
+        }
+    }
+*/
+    // A complex search with considering tiebreaks
+    int list_tiebreaks[MAX_tiebreaks];
+    int list_tiebreaks_new[MAX_tiebreaks];
+    for(int l=0; l < MAX_PERIOD && l < (query_end - query_start)/MIN_NUM_FREQ_UNIT; l++){
+        // msd (most significant digit) for backward search
+        int m, msd, max_msd, max_count_msd, init_tiebreaks, tiebreaks, max_lookahead;
+        list_tiebreaks[0] = 0;
+        init_tiebreaks = 1;
+        // Look k bases ahead if the period is of >10 bases.
+        if( l < 10 ){
+            max_lookahead = 1;
+        }else{
+            max_lookahead = k;
+        }
+        for(m = 1; m <= max_lookahead; m++){    // look m bases ahead
+            max_msd = 0;
+            max_count_msd = -1;
+            tiebreaks = 0;
+            for(int i=0; i < init_tiebreaks; i++){
+                for(int j=0; j<4; j++){
+                    msd = (j * pow4[m-1]) + list_tiebreaks[i]; // msd: most significant (4) digit
+                    int tmpNode = (msd * pow4[k-m]) + (Node / pow4[m]);
+                    int tmp_count = freq_node( tmpNode, k, width );
+                    
+                    if( max_count_msd < tmp_count)
+                    {
+                        max_count_msd = tmp_count;
+                        max_msd = msd;
+                        tiebreaks = 0;
+                        list_tiebreaks_new[tiebreaks++] = msd;
+                    }else if(max_count_msd == tmp_count)
+                    { // Allow more tiebreaks
+                        if(tiebreaks < MAX_tiebreaks){
+                            list_tiebreaks_new[tiebreaks++] = msd;
+                        }
+                    }
+                }
+            }
+            if( tiebreaks <= 1 ){    // Break if no tiebreak
+                break;
+            }else{
+                for(int i=0; i<tiebreaks; i++){
+                    list_tiebreaks[i] = list_tiebreaks_new[i];
+                }
+                init_tiebreaks = tiebreaks;
+            }
+        }
+        // Shift by one base backwa
+        Node = ((max_msd % 4) * pow4[k-1]) + (Node/4);
+        
+        // l must be smaller than the range of the query
+        rep_unit_string[l] = Node / pow4[k-1];  // Memorize the first base
+        if(3 < rep_unit_string[l]){
+            fprintf(stderr, "%i, Node = %i, k = %i\n", rep_unit_string[l], Node, k);
+            exit(EXIT_FAILURE);
+        }
+        rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
+        
+        if(Node == endNode){
+            actual_rep_period = l+1;
+            break;
+        }
+    }
+    
+    int foundLoop, tmp_rep_unit_len;
+    if(actual_rep_period == 0){
+        foundLoop = 0;
+        tmp_rep_unit_len = 0;
+        for(int i=1; i<MAX_PERIOD; i++){
+            if(rep_unit_score[i] > initialNode*0.8 &&
+               0 <= rep_unit_string[i] && rep_unit_string[i] <= 3){
+                tmp_rep_unit_len++;
+            }else{
+                break;
+            }
+        }
+        // Reversed the ordering in rep_unit_string and rep_unit_score
+        for(int i = 0; i < (tmp_rep_unit_len  / 2); i++){
+            // swap the i-th and (rep_period-1-i)-th bases
+            int tmp_base = rep_unit_string[ (tmp_rep_unit_len  - 1) - i ];
+            rep_unit_string[ (tmp_rep_unit_len - 1) - i ] = rep_unit_string[i];
+            rep_unit_string[i] = tmp_base;
+        }
+        // Scan the top tmp_rep_unit_len letters in the rep_unit_string in the reverse order
+        // e.g. 10 9 8 7 6 ... 0 1 => 8 9 10 if tmp_rep_unit_len equals 3
+        int aSubgoalNode = 0;
+        for(int i=0; i<k; i++){
+            aSubgoalNode = aSubgoalNode * 4 + rep_unit_string[i];
+        }
+        subgoalString[tmp_rep_unit_len] = '\0';
+        for(int i = 0; i < tmp_rep_unit_len; i++){
+            switch( rep_unit_string[i] ){
+                case 0: subgoalString[i] = 'A'; break;
+                case 1: subgoalString[i] = 'C'; break;
+                case 2: subgoalString[i] = 'G'; break;
+                case 3: subgoalString[i] = 'T'; break;
+                default: fprintf(stderr, "fatal error: input char %i at %i in search_De_Bruijn_graph_backward\n", rep_unit_string[i], i); exit(EXIT_FAILURE);
+            }
+        }
+        *subgoalNode = aSubgoalNode;
+    }else{
+        foundLoop = 1;
+        tmp_rep_unit_len = actual_rep_period;
+        
+        // Reversed the ordering in rep_unit_string and rep_unit_score
+        for(int i = 0; i < (tmp_rep_unit_len  / 2); i++){
+            // swap the i-th and (rep_period-1-i)-th bases
+            int tmp_base = rep_unit_string[ (tmp_rep_unit_len  - 1) - i ];
+            rep_unit_string[ (tmp_rep_unit_len - 1) - i ] = rep_unit_string[i];
+            rep_unit_string[i] = tmp_base;
+            
+            int tmp_score = rep_unit_score[ (tmp_rep_unit_len  - 1) - i ];
+            rep_unit_score[ (tmp_rep_unit_len  - 1) - i ] = rep_unit_score[i];
+            rep_unit_score[i] = tmp_score;
+        }
+        print_4_decimal_array(rep_unit_string, tmp_rep_unit_len, rr->string);
+        for(int i = 0; i < tmp_rep_unit_len; i++){
+            rr->string_score[i] = rep_unit_score[i];
+        }
+        freq_2mer_array(rep_unit_string, tmp_rep_unit_len, rr->freq_2mer);
+    }
+        
+    rr->rep_period  = tmp_rep_unit_len; //actual_rep_period;
+    
+    return(foundLoop);
+}
+
+int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
+    // Generate the list of k-mers and search for the node with the maximum count
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    int inputLen = rr->inputLen;
+    int k = rr->Kmer;
+    init_inputString(k, query_start, query_end, inputLen);
+    int width = query_end - query_start + 1;
+    
+    int maxNode, foundLoop, maxFreq;
+    
+    //maxNode = generate_freqNode_return_maxNode(query_start, query_end, k, width);
+    //foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, rr);
+    
+    int list_maxNodes[100];
+    int num_maxNodes = generate_freqNode_return_list_maxNodes(query_start, query_end, k, width, list_maxNodes, &maxFreq, 100);
+    
+    foundLoop = 0;
+    if(MIN_NUM_FREQ_UNIT < maxFreq){
+        for(int i=0; i<num_maxNodes; i++){
+            maxNode = list_maxNodes[i];
+            foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, rr);
+            if(foundLoop == 1){
+                //fprintf(stderr, "found = %i, k = %i, maxFreq = %i, num_maxNodes = %i, range = %i, num_iterations = %i, rep period = %i unit string = %s \n", foundLoop, k, maxFreq, num_maxNodes, (query_end - query_start + 1), i, rr->rep_period, rr->string);
+                break;
+            }
+        }
     }
 
+/*
+    if(foundLoop == 0){
+        int subgoalNode;
+        char subgoalString[MAX_PERIOD];
+        foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, rr, &subgoalNode, subgoalString);
+        
+        if(foundLoop == 0 && k < rr->rep_period){
+            //fprintf(stderr, "k = %i, initialNode = %i, subgoalNode = %i, subgaolString = %s, len = %i\n", k, maxNode, subgoalNode, subgoalString, rr->rep_period);
+            int len_backward_search = rr->rep_period;
+            foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, subgoalNode, rr);
+            if(foundLoop == 1){
+                //fprintf(stderr, "k = %i, subgoalNode = %i, initialNode = %i, backward = %s, forward = %s, len = %i, len = %i\n", k, subgoalNode, maxNode, subgoalString, rr->string, len_backward_search, rr->rep_period );
+                rr->rep_period = len_backward_search + rr->rep_period;
+                strcat(subgoalString, rr->string);
+                strcpy(rr->string, subgoalString);
+            }
+        }
+    }
+*/
+    gettimeofday(&e, NULL);
+    time_init_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
+    return(foundLoop);
+        
 }
+
 
 int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit, int width){
     

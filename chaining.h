@@ -36,14 +36,12 @@ extern "C" {
                           int   rep_end,
                           int   repeat_len,
                           int   rep_period,
-                          int   predicted_rep_period,
                           int   Num_freq_unit,
                           int   Num_matches,
                           int   Num_mismatches,
                           int   Num_insertions,
                           int   Num_deletions,
                           int   Kmer,
-                          int   ConsensusMethod,
                           char* string,
                           int*  string_score);
     void chaining(int print_alignment);

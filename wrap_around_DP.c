@@ -70,7 +70,8 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
     }
     
     int *rep;
-    rep = &orgInputString[rep_start];
+    rep = &orgInputString[rep_start-1];
+    //rep = &orgInputString[rep_start];
     int rep_len = rep_end - rep_start + 1;
     
     int i, j;
@@ -325,8 +326,10 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     
     
     // Consider the 1-origin index carefully
-    rr->rep_start           = query_start + i;
-    rr->rep_end             = query_start + max_i - 1;
+    rr->rep_start           = query_start + i + 1;
+    rr->rep_end             = query_start + max_i;
+    //rr->rep_start           = query_start + i;
+    //rr->rep_end             = query_start + max_i - 1;
     rr->repeat_len          = max_i - i; //max_i - 1;
     rr->Num_freq_unit       = (int)Num_scanned_unit/unit_len;
     rr->Num_matches         = Num_matches;
