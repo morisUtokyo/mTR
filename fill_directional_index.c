@@ -54,9 +54,12 @@ void clear_rr(repeat_in_read *rr_a){
     rr_a->Num_insertions    = -1;
     rr_a->Num_deletions     = -1;
     rr_a->Kmer              = -1;
+    rr_a->match_gain          = -1;
+    rr_a->mismatch_penalty    = -1;
+    rr_a->indel_penalty       = -1;
 }
 
-void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
+void set_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
     rr_a->ID                = rr_b->ID;
     strcpy( rr_a->readID, rr_b->readID);
     rr_a->inputLen          = rr_b->inputLen;
@@ -75,6 +78,9 @@ void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b){
     rr_a->Num_insertions    = rr_b->Num_insertions;
     rr_a->Num_deletions     = rr_b->Num_deletions;
     rr_a->Kmer              = rr_b->Kmer;
+    rr_a->match_gain        = rr_b->match_gain;
+    rr_a->mismatch_penalty  = rr_b->mismatch_penalty;
+    rr_a->indel_penalty     = rr_b->indel_penalty;
 }
 
 double DI_index(int *vector0, int *vector1, int *vector2, int k){
@@ -430,6 +436,17 @@ void fill_directional_index_PCC(int DI_array_length, int w, int k, int inputLen,
     }
 }
 
+ // A larger value produces a smaller number of candidate ranges and accelerates the computational performance but reduces the accuracy
+float min_max_DI(int w){
+    if(w <= 40){
+        return(0.3);
+    }else if(w <= 80){
+        return(0.2);
+    }else{
+        return(0.1);
+    }
+}
+
 void put_local_maximum_into_directional_index(int DI_array_length, int w){
     // Search for local maximums
     double local_max = -1;  // Set it to the mimimum -1
@@ -441,7 +458,7 @@ void put_local_maximum_into_directional_index(int DI_array_length, int w){
         }
         if(local_max_i + w < i &&
            directional_index[local_max_i] < local_max &&
-           MIN_MAX_DI < local_max )
+           min_max_DI(w) < local_max )
         {
             // The position, local_max_i, was updated more than w before the current position i.
             // It must be also greater than the maximum at the position.

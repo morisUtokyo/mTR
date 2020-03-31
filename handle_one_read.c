@@ -74,25 +74,14 @@ void freq_2mer_array(int* val, int len, int *freq_2mer){
 
 
 
-void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int inputLen, int k, repeat_in_read *rr ){
-    
+void find_tandem_repeat_sub(int query_start, int query_end, repeat_in_read *rr ){
     //---------------------------------------------------------------------------
     // In the range [query_start, query_end],
     // compute the representative unit string
     // by traversing the De Bruijn graph of all k-mers in a greedy manner
     //---------------------------------------------------------------------------
     
-    strcpy( rr->readID, readID);
-    rr->inputLen = inputLen;
-    rr->Kmer     = k;
-    
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
-    
     int foundLoop = search_De_Bruijn_graph(query_start, query_end, rr);
-    
-    gettimeofday(&e, NULL);
-    time_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
     if(foundLoop == 0){
         clear_rr(rr);
@@ -101,25 +90,30 @@ void find_tandem_repeat_sub(int query_start, int query_end, char *readID, int in
         fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
         clear_rr(rr);
     }else{
-        wrap_around_DP(query_start, query_end, rr);
-        
         // Polish the repeat unit if it is short and its coverage is small.
         // Otherwise, the coverage would be large enough.
         int coverage = rr->repeat_len / rr->rep_period;
         if( 5 <= coverage && coverage <= 20 && 10 < rr->rep_period){
-            gettimeofday(&s, NULL);
-            
+
             polish_repeat(rr);
+#ifdef DEBUG_forward_backward
+            if(rr->rep_period > 0){
+                fprintf(stderr, "----- after polished\trep period = %i,\trange = (%i, %i),\tmat = %i,\tmis = %i,\tins = %i,\tdel = %i\n", rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_matches, rr->Num_mismatches, rr->Num_insertions, rr->Num_deletions);
+            }
+#endif
+
             revise_representative_unit(rr);
-            //wrap_around_DP(query_start, query_end, rr);
-            
-            gettimeofday(&e, NULL);
-            time_polish += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+#ifdef DEBUG_forward_backward
+            if(rr->rep_period > 0){
+                fprintf(stderr, "------ after revised\trep period = %i,\trange = (%i, %i),\tmat = %i,\tmis = %i,\tins = %i,\tdel = %i\n", rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_matches, rr->Num_mismatches, rr->Num_insertions, rr->Num_deletions);
+            }
+#endif
+
         }
     }
 }
 
-void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int inputLen, repeat_in_read *rr, repeat_in_read *tmp_rr ){
+void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int inputLen, repeat_in_read *rr ){
     
     // A heuristic rule for setting the k-mer range for a de Bruijn graph to an nearly optimal one
     int min_k, max_k;
@@ -134,25 +128,40 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         max_k = maxKmer;        // 11
     }
     
-    int max_matches = -1;
+    float max_ratio = -1;
+    //int max_matches = -1;
+    
+    repeat_in_read *tmp_rr;
+    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
     clear_rr(tmp_rr);  // clear the space for the result
-    int ans_k;
+    
     for(int k = min_k; k <= max_k; k++){
-        clear_rr(rr);
-        find_tandem_repeat_sub(query_start, query_end, readID, inputLen, k, rr);
+        clear_rr(rr); strcpy( rr->readID, readID); rr->inputLen = inputLen; rr->Kmer = k;
         
-        if( max_matches < rr->Num_matches &&
-           min_match_ratio <= (float)rr->Num_matches/rr->repeat_len &&
+        find_tandem_repeat_sub(query_start, query_end, rr);
+        //find_tandem_repeat_sub(query_start, query_end, rr, tmp_rr);
+        
+        float tmp_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+        if(max_ratio < tmp_ratio &&
+           //max_matches < rr->Num_matches &&
+           min_match_ratio <= tmp_ratio &&
            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
            MIN_PERIOD <= rr->rep_period )
         {
-            max_matches = rr->Num_matches;
-            assign_rr(tmp_rr, rr);
-            ans_k = k;
+            max_ratio = tmp_ratio;
+            //max_matches = rr->Num_matches;
+            set_rr(tmp_rr, rr);
         }
     }
-    assign_rr(rr, tmp_rr);
-    //if(rr->rep_period > 0){ fprintf(stderr, "----- k = %i, rep period = %i\n", ans_k, rr->rep_period);}
+    set_rr(rr, tmp_rr);
+    free(tmp_rr);
+#ifdef DEBUG_forward_backward
+    if(rr->rep_period >= 0){
+        fprintf(stderr, "##### rr k = %i, rep period = %i, range = (%i,%i), freq = %i\n\n", rr->Kmer, rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_freq_unit);
+    }else{
+        //fprintf(stderr, "#---- none found\n");
+    }
+#endif
 }
 
 void insert_an_alignment(repeat_in_read rr){
@@ -216,13 +225,13 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     
     for(int query_start=0; query_start < inputLen; query_start++){
         int query_end = directional_index_end[query_start];
-        if(-1 < query_end && query_end < inputLen && MIN_MAX_DI < directional_index[query_start])
+        if(-1 < query_end && query_end < inputLen)
         {
             // Move onto de Bruijn graph construction
             clear_rr(&RRs[0]); clear_rr(&RRs[1]);
             int width     = directional_index_w[query_start];
             
-            find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0], &RRs[1]);
+            find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0] );
             
             query_counter++;
             // Examine if a qualified TR is found

@@ -56,6 +56,12 @@ int base_char2int(char c){
 
 void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end){
     
+    // tentative
+    int MATCH_GAIN          = 1;  // 3 // 1 // 1
+    int MISMATCH_PENALTY    = 1;
+    int INDEL_PENALTY       = 3;  // 1 // 1 //3
+    
+    
     int rep_unit[MAX_PERIOD];
     int intBase;
     for(int i=0; i<unit_len; i++){   // 1-origin index
@@ -211,7 +217,7 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
 
 // We used a local alignment algorithm in place of a global alignment that outputs lengthy alignments.
 
-void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
+void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY ){
     
     struct timeval s, e;
     gettimeofday(&s, NULL);
@@ -227,7 +233,7 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
             case 'C': intBase = 1; break;
             case 'G': intBase = 2; break;
             case 'T': intBase = 3; break;
-            default: fprintf(stderr, "wrap_around_DP: fatal input char %c\n", rr->string[i]);
+            default: fprintf(stderr, "wrap_around_DP: fatal input char %c at %i (unit len = %i)\n", rr->string[i]), i, rr->rep_period;
         }
         rep_unit[i+1] = intBase;  // Shift by 1 for *1*-origin index
     }
@@ -339,4 +345,31 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
  
     gettimeofday(&e, NULL);
     time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+}
+
+
+void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
+
+    float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+    
+    repeat_in_read *tmp_rr;
+    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    
+    // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
+    set_rr( tmp_rr, rr );
+    wrap_around_DP_sub( query_start, query_end, tmp_rr, 5, 1, 1 );
+    
+    float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    
+    if(rr_ratio < tmp_rr_ratio)
+        set_rr( rr, tmp_rr );
+    
+    // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
+    set_rr( tmp_rr, rr );
+    wrap_around_DP_sub( query_start, query_end, tmp_rr, 1, 1, 3);
+    tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    if(rr_ratio < tmp_rr_ratio)
+        set_rr( rr, tmp_rr );
+    
+    free(tmp_rr);
 }

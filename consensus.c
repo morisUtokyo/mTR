@@ -340,17 +340,19 @@ int search_De_Bruijn_graph_forward( int query_start, int query_end, int initialN
     }
     rr->rep_period           = actual_rep_period;
     
-    if(actual_rep_period < MIN_PERIOD){
+    int foundLoop;
+    if(actual_rep_period == 0){
         // if actual_rep_period == 0, return NULL.
-        return(0);
+        foundLoop = 0;
     }else{
         print_4_decimal_array(rep_unit_string, actual_rep_period, rr->string);
         for(int i=0; i<rr->rep_period; i++){
             rr->string_score[i] = rep_unit_score[i];
         }
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
-        return(1);
+        foundLoop = 1;
     }
+    return(foundLoop);
 }
 
 int search_De_Bruijn_graph_backward( int query_start, int query_end, int initialNode, int endNode, repeat_in_read *rr, int *subgoalNode, char *subgoalString){
@@ -366,31 +368,7 @@ int search_De_Bruijn_graph_backward( int query_start, int query_end, int initial
     int Node = initialNode;
     int actual_rep_period = 0;
     for(int i = 0; i < MAX_PERIOD; i++){ rep_unit_string[i] = -1; }
-/*
-    // A simple search without considering tiebreaks
-    for(int l=0; l < MAX_PERIOD && l < (query_end - query_start)/MIN_NUM_FREQ_UNIT; l++){
-        rep_unit_string[l] = Node % 4;  // Memorize the LAST base
-        rep_unit_score[l] = freq_node(Node, k, width);    //rep_unit_score[l] = count[Node];
-        if(rep_unit_score[l] < 1){ return; }
-        int tmpNode, max_tmpNode, max_count_tmpNode;
-        max_tmpNode = 0;
-        max_count_tmpNode = -1;
-        for(int j = 0; j < 4; j++){
-            tmpNode = j * pow4[k-1] + Node/4; // msd: most significant (4) digit
-            int tmp_count = freq_node( tmpNode, k, width );
-            if( max_count_tmpNode < tmp_count)
-            {
-                max_count_tmpNode = tmp_count;
-                max_tmpNode = tmpNode;
-            }
-        }
-        Node = max_tmpNode; // use the maximum msd
-        if(Node == endNode){
-            actual_rep_period = l+1;
-            break;
-        }
-    }
-*/
+
     // A complex search with considering tiebreaks
     int list_tiebreaks[MAX_tiebreaks];
     int list_tiebreaks_new[MAX_tiebreaks];
@@ -438,7 +416,7 @@ int search_De_Bruijn_graph_backward( int query_start, int query_end, int initial
                 init_tiebreaks = tiebreaks;
             }
         }
-        // Shift by one base backwa
+        // Shift by one base backward
         Node = ((max_msd % 4) * pow4[k-1]) + (Node/4);
         
         // l must be smaller than the range of the query
@@ -520,54 +498,77 @@ int search_De_Bruijn_graph_backward( int query_start, int query_end, int initial
 
 int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     // Generate the list of k-mers and search for the node with the maximum count
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
+    
     int inputLen = rr->inputLen;
     int k = rr->Kmer;
+    char readID[BLK];
+    strcpy(readID, rr->readID);
     init_inputString(k, query_start, query_end, inputLen);
     int width = query_end - query_start + 1;
     
-    int maxNode, foundLoop, maxFreq;
-    
-    //maxNode = generate_freqNode_return_maxNode(query_start, query_end, k, width);
-    //foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, rr);
-    
+    int maxNode, maxFreq;
     int list_maxNodes[100];
     int num_maxNodes = generate_freqNode_return_list_maxNodes(query_start, query_end, k, width, list_maxNodes, &maxFreq, 100);
     
-    foundLoop = 0;
+    float max_ratio = -1;
+    //int max_matches = -1;
+    int foundLoop;
+    
+    repeat_in_read *tmp_rr;
+    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    clear_rr(tmp_rr);
+                                      
     if(MIN_NUM_FREQ_UNIT < maxFreq){
-        for(int i=0; i<num_maxNodes; i++){
-            maxNode = list_maxNodes[i];
-            foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, rr);
-            if(foundLoop == 1){
-                //fprintf(stderr, "found = %i, k = %i, maxFreq = %i, num_maxNodes = %i, range = %i, num_iterations = %i, rep period = %i unit string = %s \n", foundLoop, k, maxFreq, num_maxNodes, (query_end - query_start + 1), i, rr->rep_period, rr->string);
-                break;
-            }
-        }
-    }
+        for(int search_stat=0; search_stat<2; search_stat++){
+            for(int i=0; i<num_maxNodes; i++){
+                maxNode = list_maxNodes[i];
 
-/*
-    if(foundLoop == 0){
-        int subgoalNode;
-        char subgoalString[MAX_PERIOD];
-        foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, rr, &subgoalNode, subgoalString);
-        
-        if(foundLoop == 0 && k < rr->rep_period){
-            //fprintf(stderr, "k = %i, initialNode = %i, subgoalNode = %i, subgaolString = %s, len = %i\n", k, maxNode, subgoalNode, subgoalString, rr->rep_period);
-            int len_backward_search = rr->rep_period;
-            foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, subgoalNode, rr);
-            if(foundLoop == 1){
-                //fprintf(stderr, "k = %i, subgoalNode = %i, initialNode = %i, backward = %s, forward = %s, len = %i, len = %i\n", k, subgoalNode, maxNode, subgoalString, rr->string, len_backward_search, rr->rep_period );
-                rr->rep_period = len_backward_search + rr->rep_period;
-                strcat(subgoalString, rr->string);
-                strcpy(rr->string, subgoalString);
+                // search forward or backward
+                if(search_stat == 0){
+                    clear_rr(rr); rr->Kmer = k; rr->inputLen = inputLen; strcpy(rr->readID, readID);
+                    foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, rr);
+                }else{
+                    int subgoalNode;
+                    char subgoalString[MAX_PERIOD];
+                    clear_rr(rr); rr->Kmer = k; rr->inputLen = inputLen; strcpy(rr->readID, readID);
+                    foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, rr, &subgoalNode, subgoalString);
+                }
+                
+                if(foundLoop == 1){
+                    wrap_around_DP(query_start, query_end, rr);
+#ifdef DEBUG_forward_backward
+                    if(search_stat == 0){
+                        fprintf(stderr, "forward,  ");
+                    }else{
+                        fprintf(stderr, "backward, ");
+                    }
+                    fprintf(stderr, "k = %i,\tmaxFreq = %i,\tnum_maxNodes = %i,\trange = (%i, %i),\trep period = %i,\tunit string = %s \n", k, maxFreq, num_maxNodes, rr->rep_start, rr->rep_end, rr->rep_period, rr->string);
+#endif
+                    float tmp_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+                    // float tmp_ratio = (float)rr->Num_matches/rr->repeat_len;
+                    if(max_ratio < tmp_ratio &&
+                       //max_matches < rr->Num_matches &&
+                       min_match_ratio <= tmp_ratio &&
+                       MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
+                       MIN_PERIOD <= rr->rep_period )
+                    {
+                        max_ratio = tmp_ratio;
+                        //max_matches = rr->Num_matches;
+                        set_rr(tmp_rr, rr);
+                    }
+                    // exit if one loop is found
+                    break;
+                }
             }
         }
     }
-*/
-    gettimeofday(&e, NULL);
-    time_init_search_De_Bruijn_graph += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    set_rr(rr, tmp_rr);
+    free(tmp_rr);
+#ifdef DEBUG_forward_backward
+    if(rr->rep_period > 0){
+        fprintf(stderr, "----- before polished\trep period = %i,\trange = (%i, %i),\tmat = %i,\tmis = %i,\tins = %i,\tdel = %i\n", rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_matches, rr->Num_mismatches, rr->Num_insertions, rr->Num_deletions);
+    }
+#endif
     
     return(foundLoop);
         
@@ -693,6 +694,8 @@ void polish_repeat(repeat_in_read *rr){
         rr->string[i] = c;
     }
     rr->string[rr->rep_period] = '\0';
+    
+    wrap_around_DP_sub(rr->rep_start, rr->rep_end, rr, rr->match_gain, rr->mismatch_penalty, rr->indel_penalty);
 }
 
 // Columns from the top represent mismatch ratios: 0.25, 0.2, 0.15, 0.1, 0.05, and 0.025.
@@ -748,13 +751,17 @@ int min_missing(double ratio, int coverage){
 
 // This function is not effective in increasing the accuracy of predicting repeat units perfectly
 //void revise_representative_unit( repeat_in_read *rr,  char *string, int unit_len, int query_start, int query_end){
-void revise_representative_unit( repeat_in_read *rr){
+void revise_representative_unit_sub( repeat_in_read *rr, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY ){
 
     // Initialization
     char *string    = rr->string;
     int unit_len    = rr->rep_period;
     int query_start = rr->rep_start;
     int query_end   = rr->rep_end;
+    
+    rr->match_gain       = MATCH_GAIN;
+    rr->mismatch_penalty = MISMATCH_PENALTY;
+    rr->indel_penalty    = INDEL_PENALTY;
     
     // Convert a char array into an int array
     int rep_unit[MAX_PERIOD];
@@ -904,6 +911,7 @@ void revise_representative_unit( repeat_in_read *rr){
             }
         }
     }
+    rr->rep_period = revised_rep_j;
     print_4_decimal_array(revised_rep_unit, revised_rep_j, rr->string);
     
     
@@ -940,7 +948,34 @@ void revise_representative_unit( repeat_in_read *rr){
     
 }
 
-
+void revise_representative_unit( repeat_in_read *rr ){
+ 
+    float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+    
+    repeat_in_read *tmp_rr;
+    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    
+    // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
+    set_rr( tmp_rr, rr );
+    int MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY;
+    MATCH_GAIN = 5; MISMATCH_PENALTY = 1; INDEL_PENALTY = 1;
+    revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
+    wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
+    float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    if(rr_ratio < tmp_rr_ratio)
+        set_rr( rr, tmp_rr );
+    
+    // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
+    set_rr( tmp_rr, rr );
+    MATCH_GAIN = 1; MISMATCH_PENALTY = 1; INDEL_PENALTY = 3;
+    revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
+    wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
+    tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    if(rr_ratio < tmp_rr_ratio)
+        set_rr( rr, tmp_rr );
+    
+    free(tmp_rr);
+}
 
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k){
     

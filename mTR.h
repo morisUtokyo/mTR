@@ -51,12 +51,6 @@ float min_match_ratio;
 #define BLK 4096        // Block size of input buffer.
 #define WrapDPsize  200000000    // 200M  = repeat_unit_size (200) x length_of_repeats (1,000,000)
 
-
-// Parameters for global and wrap around alignment
-#define MATCH_GAIN   1
-#define MISMATCH_PENALTY 1
-#define INDEL_PENALTY  3
-
 //  Choice of DeBruijn graph or progressive multiple alignment
 #define ProgressiveMultipleAlignment 0
 #define DeBruijnGraphSearch 1
@@ -93,8 +87,6 @@ char *alignment_repeats;
                         // The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 int **consensus, **gaps;  // Space for consensus
 
-double MIN_MAX_DI;      // For filtering out reads with less meaningful tandem repeats
-
 
 typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     ID;  // 0,1,2,...
@@ -113,6 +105,9 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     char    string[MAX_PERIOD];
     int     string_score[MAX_PERIOD];
     int     freq_2mer[16];
+    int     match_gain;
+    int     mismatch_penalty;
+    int     indel_penalty;
 } repeat_in_read;
 
 repeat_in_read *RRs;
@@ -129,20 +124,23 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
 void init_inputString(int k, int query_start, int query_end, int inputLen);
 
 int search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr);
+//int search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr, repeat_in_read *tmp_rr);
 void polish_repeat(repeat_in_read *rr);
 void revise_representative_unit( repeat_in_read *rr);
 void wrap_around_DP(int query_start, int query_end, repeat_in_read *rr);
+void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY );
 
-void assign_rr(repeat_in_read *rr_a, repeat_in_read *rr_b);
+void set_rr(repeat_in_read *rr_a, repeat_in_read *rr_b);
 void clear_rr(repeat_in_read *rr_a);
 void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
 
-float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_search_De_Bruijn_graph, time_init_search_De_Bruijn_graph, time_polish, time_count_table, time_chaining;
+float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_count_table, time_chaining;
 int query_counter;
 
-// For debugging with #ifdef
+//For debugging with #ifdef
+//#define DEBUG_forward_backward
 
 //#define DEBUG_unit_score
 //#define DEBUG_revise_representative_unit
