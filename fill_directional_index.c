@@ -438,6 +438,8 @@ void fill_directional_index_PCC(int DI_array_length, int w, int k, int inputLen,
 
  // A larger value produces a smaller number of candidate ranges and accelerates the computational performance but reduces the accuracy
 float min_max_DI(int w){
+    return(0);
+    /*
     if(w <= 40){
         return(0.3);
     }else if(w <= 80){
@@ -445,6 +447,7 @@ float min_max_DI(int w){
     }else{
         return(0.1);
     }
+    */
 }
 
 void put_local_maximum_into_directional_index(int DI_array_length, int w){
