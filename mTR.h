@@ -41,7 +41,7 @@ float min_match_ratio;
 
 
 // The following values are optimzed for a benchmark dataset.
-#define MIN_WINDOW 10 // 20  // Window size parameters for locating the boundaries of tandem repeats
+#define MIN_WINDOW 5 //10 // 20  // Window size parameters for locating the boundaries of tandem repeats
 #define MAX_WINDOW 10240
 
 #define minKmer 5
@@ -142,27 +142,4 @@ int query_counter;
 //For debugging with #ifdef
 //#define DEBUG_forward_backward
 
-//#define DEBUG_unit_score
-//#define DEBUG_revise_representative_unit
-
-//#define DEBUG_de_Bruijn
-//#define DEBUG_polish_repeat
-
-//#define DEBUG_chaining
-
-//#define DEBUG_progressive_multiple_alignment
-
 //#define DUMP_DI_Manhattan
-//#define DUMP_DI_PCC
-
-//#define Print_overlapping_event
-
-//#define DEBUG_algorithm_wrap_around_all
-//#define DEBUG_algorithm_wrap_around
-
-//#define DEBUG_incremental
-
-//#define DEBUG_finding_ranges
-//#define DEBUG_NUM_QUERIES
-
-

@@ -200,12 +200,15 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     // Locate overlapping regions of tandem repeats
     //
     //int random_string_length = 10;
+    
     int random_string_length;
+    
     if(inputLen < MAX_WINDOW * 2){
         random_string_length = inputLen;
     }else{
         random_string_length = MAX_WINDOW * 2;
     }
+    
     
     int DI_array_length = inputLen + random_string_length*2;
     

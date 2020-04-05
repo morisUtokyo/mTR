@@ -439,6 +439,7 @@ void fill_directional_index_PCC(int DI_array_length, int w, int k, int inputLen,
  // A larger value produces a smaller number of candidate ranges and accelerates the computational performance but reduces the accuracy
 float min_max_DI(int w){
     return(0);
+    // The following heuristics for pruning the search space is likely to overlook true tandem repeats when the frequency of TRs is 10 or less.
     /*
     if(w <= 40){
         return(0.3);
