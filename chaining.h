@@ -43,21 +43,15 @@ extern "C" {
                           int   Num_deletions,
                           int   Kmer,
                           char* string,
-                          int*  string_score);
+                          int*  string_score,
+                          int   match_gain,
+                          int   mismatch_penalty,
+                          int   indel_penalty
+                          );
     void chaining(int print_alignment);
     void search_max(int print_alignment);
     void delete_set_of_alignments();
-    extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end);
-/*
-    extern void revise_by_progressive_multiple_alignment(int* a_rep_unit_string, int rep_period, int query_start, int query_end, int k);
-    extern void wrap_around_DP(
-                               int *rep_unit, int unit_len,
-                               int query_start, int query_end,
-                               int *actual_start,   int *actual_end,
-                               int *return_rep_len, int *return_freq_unit,
-                               int *return_matches, int *return_mismatches,
-                               int *return_insertions, int *return_deletions);
- */
+    extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY);
     extern void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
 }
 #endif

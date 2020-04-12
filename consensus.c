@@ -267,6 +267,10 @@ void print_4_decimal_array(int* val, int len, char *return_string){
 }
 
 int search_De_Bruijn_graph_forward( int query_start, int query_end, int initialNode, int endNode, repeat_in_read *rr){
+    
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
+    
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     int width = query_end - query_start + 1;
     int rep_unit_string[MAX_PERIOD];
@@ -352,10 +356,17 @@ int search_De_Bruijn_graph_forward( int query_start, int query_end, int initialN
         freq_2mer_array(rep_unit_string, actual_rep_period, rr->freq_2mer);
         foundLoop = 1;
     }
+    
+    gettimeofday(&e, NULL);
+    time_de_bruijn_graph_search += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+    
     return(foundLoop);
 }
 
 int search_De_Bruijn_graph_backward( int query_start, int query_end, int initialNode, int endNode, repeat_in_read *rr, int *subgoalNode, char *subgoalString){
+    
+    struct timeval s, e;
+    gettimeofday(&s, NULL);
     
     // Starting from the initial k-mer, traverse the De Bruijn graph of all k-mers in a greedy manner
     int width = query_end - query_start + 1;
@@ -492,8 +503,12 @@ int search_De_Bruijn_graph_backward( int query_start, int query_end, int initial
     }
         
     rr->rep_period  = tmp_rep_unit_len; //actual_rep_period;
+
+    gettimeofday(&e, NULL);
+    time_de_bruijn_graph_search += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
     
     return(foundLoop);
+
 }
 
 int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
@@ -534,7 +549,7 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
                     foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, rr, &subgoalNode, subgoalString);
                 }
                 
-                if(foundLoop == 1){
+                if(foundLoop == 1 && MIN_PERIOD <= rr->rep_period){
                     wrap_around_DP(query_start, query_end, rr);
 #ifdef DEBUG_forward_backward
                     if(search_stat == 0){
@@ -913,6 +928,9 @@ void revise_representative_unit_sub( repeat_in_read *rr, int MATCH_GAIN, int MIS
     }
     rr->rep_period = revised_rep_j;
     print_4_decimal_array(revised_rep_unit, revised_rep_j, rr->string);
+    rr->match_gain          = MATCH_GAIN;
+    rr->mismatch_penalty    = MISMATCH_PENALTY;
+    rr->indel_penalty       = INDEL_PENALTY;
     
     
 #ifdef DEBUG_revise_representative_unit
@@ -957,8 +975,9 @@ void revise_representative_unit( repeat_in_read *rr ){
     
     // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
     set_rr( tmp_rr, rr );
-    int MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY;
-    MATCH_GAIN = 5; MISMATCH_PENALTY = 1; INDEL_PENALTY = 1;
+    int MATCH_GAIN = 5;
+    int MISMATCH_PENALTY = 1;
+    int INDEL_PENALTY = 1;
     revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
     wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
     float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
@@ -967,7 +986,9 @@ void revise_representative_unit( repeat_in_read *rr ){
     
     // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
     set_rr( tmp_rr, rr );
-    MATCH_GAIN = 1; MISMATCH_PENALTY = 1; INDEL_PENALTY = 3;
+    MATCH_GAIN = 1;
+    MISMATCH_PENALTY = 1;
+    INDEL_PENALTY = 3;
     revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
     wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
     tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);

@@ -54,13 +54,12 @@ int base_char2int(char c){
     }
 }
 
-void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end){
+void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY){
     
     // tentative
-    int MATCH_GAIN          = 1;  // 3 // 1 // 1
-    int MISMATCH_PENALTY    = 1;
-    int INDEL_PENALTY       = 3;  // 1 // 1 //3
-    
+    //int MATCH_GAIN          = 1;  // 3 // 1 // 1
+    //int MISMATCH_PENALTY    = 1;
+    //int INDEL_PENALTY       = 3;  // 1 // 1 //3
     
     int rep_unit[MAX_PERIOD];
     int intBase;
@@ -185,6 +184,10 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
         }
     }
 
+    // print the gain and penalty used for the alignment
+    printf("(match gain, mismatch penalty, indel penalty) = (%i,%i,%i)\n\n", MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
+    
+    
     // print backward from the end of alignment arrays
     for(int i_start = pos-1; 0 <= i_start; i_start -= ALIGNMENT_WIDTH_PRINTING){
         int i_end;
@@ -210,142 +213,141 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
     }
 }
 
+ void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY ){
+     
+     struct timeval s, e;
+     gettimeofday(&s, NULL);
 
-
-// The repeat unit is the input sequence.
-// The number of deletions is represented as a positive integer.
-
-// We used a local alignment algorithm in place of a global alignment that outputs lengthy alignments.
-
-void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY ){
-    
-    struct timeval s, e;
-    gettimeofday(&s, NULL);
-
-    // Initialization
-    int unit_len = rr->rep_period;
-    
-    int rep_unit[MAX_PERIOD];
-    for(int i = 0; i < unit_len; i++){
-        int intBase;
-        switch(rr->string[i]){
-            case 'A': intBase = 0; break;
-            case 'C': intBase = 1; break;
-            case 'G': intBase = 2; break;
-            case 'T': intBase = 3; break;
-            default: fprintf(stderr, "wrap_around_DP: fatal input char %c at %i (unit len = %i)\n", rr->string[i]), i, rr->rep_period;
-        }
-        rep_unit[i+1] = intBase;  // Shift by 1 for *1*-origin index
-    }
-    
-    int *rep;
-    rep = &orgInputString[query_start];
-    int rep_len = query_end - query_start + 1;
-    
-    int i, j;
-    int next = unit_len+1;
-
-    for(j=0; j<=rep_len; j++){   // Scan rep_unit
-        WrapDP[next*0 + j] = 0; // local alignment
-    }
-    
-    int max_wrd = 0;
-    int max_i = 0;
-    int max_j = 0;
-    int val_match, val_mismatch, val_insertion, val_deletion;
-    for(i=1; i <= rep_len; i++){        // Scan repeat
-        for(j=1; j<=unit_len; j++){   // Scan rep_unit
-            if( WrapDPsize <= next*i + j ){
-                fprintf(stderr, "You need to increse the value of WrapDPsize.\n");
-                exit(EXIT_FAILURE);
-            }
-            if(rep[i] == rep_unit[j]){    // *1*-origin index !!!!
-                WrapDP[next*i + j] = WrapDP[next*(i-1) + j-1]  + MATCH_GAIN;
-            }else{
-                val_mismatch    = WrapDP[next*(i-1) + j-1]  - MISMATCH_PENALTY;
-                val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
-                if(j > 1){
-                    val_deletion = WrapDP[next*i + j-1] - INDEL_PENALTY;
-                    WrapDP[next*i + j] = MAX(0, MAX( MAX( val_mismatch, val_insertion), val_deletion));
-                }else{
-                    WrapDP[next*i + j] = MAX(0, MAX( val_mismatch, val_insertion));
-                }
-            }
-            if(max_wrd < WrapDP[next*i + j])
-            {
-                max_wrd = WrapDP[next*i + j];
-                max_i = i;
-                max_j = j;
-            }
-        }
-        // wrap around
-        WrapDP[next*i + 0] = WrapDP[next*i + unit_len];
-    }
-    
-    // trace back the optimal alignment while storing it in the data structure "alignment"
-    int Num_matches = 0;
-    int Num_mismatches = 0;
-    int Num_insertions = 0;
-    int Num_deletions  = 0;
-    int Num_scanned_unit = 0;
-    
-    i = max_i;
-    j = max_j;
-    if(j == 0){ j = unit_len; } // 1-origin index
-    
-    while(i > 0 && WrapDP[next*i + j] > 0){                 // global alignment
-        val_match       = WrapDP[next*(i-1) + j-1]  + MATCH_GAIN;
-        val_mismatch    = WrapDP[next*(i-1) + j-1]  - MISMATCH_PENALTY;
-        val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
-        val_deletion    = WrapDP[next*i + j-1]      - INDEL_PENALTY;
-        
-        if( max_wrd == val_match          && rep[i] == rep_unit[j]){
-            max_wrd -= MATCH_GAIN;
-            i--; j--;
-            Num_matches++;
-            Num_scanned_unit++;
-        }else if( max_wrd == val_mismatch && rep[i] != rep_unit[j]){     // mismatch
-            max_wrd += MISMATCH_PENALTY;
-            i--; j--;
-            Num_mismatches++;
-            Num_scanned_unit++;
-        }else if( max_wrd == val_deletion){     // deletion
-            max_wrd += INDEL_PENALTY;
-            j--;
-            Num_deletions++;    // Num_insertions++;
-            Num_scanned_unit++;
-        }else if( max_wrd == val_insertion){    // insertion
-            max_wrd += INDEL_PENALTY;
-            i--;
-            Num_insertions++;
-            //Num_scanned_unit++;       // The base of the repeat unit is skipped.
-        }else if( max_wrd == 0){
-            break;
-        }else{
-            fprintf(stderr, "fatal error in wrap-around DP max_wrd = %i\n", max_wrd);
-            exit(EXIT_FAILURE);
-        }
-        if(j == 0){
-            j = unit_len;
-        }
-    }
-    
-    
-    // Consider the 1-origin index carefully
-    rr->rep_start           = query_start + i + 1;
-    rr->rep_end             = query_start + max_i;
-    //rr->rep_start           = query_start + i;
-    //rr->rep_end             = query_start + max_i - 1;
-    rr->repeat_len          = max_i - i; //max_i - 1;
-    rr->Num_freq_unit       = (int)Num_scanned_unit/unit_len;
-    rr->Num_matches         = Num_matches;
-    rr->Num_mismatches      = Num_mismatches;
-    rr->Num_insertions      = Num_insertions;
-    rr->Num_deletions       = Num_deletions;
- 
-    gettimeofday(&e, NULL);
-    time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
-}
+     // Initialization
+     int unit_len = rr->rep_period;
+     
+     int rep_unit[MAX_PERIOD];
+     for(int i = 0; i < unit_len; i++){
+         int intBase;
+         switch(rr->string[i]){
+             case 'A': intBase = 0; break;
+             case 'C': intBase = 1; break;
+             case 'G': intBase = 2; break;
+             case 'T': intBase = 3; break;
+             default: fprintf(stderr, "wrap_around_DP: fatal input char %c at %i (unit len = %i)\n", rr->string[i]), i, rr->rep_period;
+         }
+         rep_unit[i+1] = intBase;  // Shift by 1 for *1*-origin index
+     }
+     
+     int *rep;
+     rep = &orgInputString[query_start];
+     int rep_len = query_end - query_start + 1;
+     
+     int i, j;
+     int next = unit_len+1;
+     
+     for(i=0; i<=rep_len; i++){
+         WrapDP[next*0 + i] = 0;    // WrapDP[i][0] = 0 for all i
+     }
+     /*
+     for(j=0; j<=unit_len; j++){     // WrapDP[i][j] i and j scan the repeat and its candidate unit
+         WrapDP[next*j + 0] = 0;     // WrapDP[0][j] = 0 for all j
+     }
+     */
+     int max_wrd = 0;
+     int max_i = 0;
+     int max_j = 0;
+     int val_match, val_mismatch, val_insertion, val_deletion;
+     for(i=1; i <= rep_len; i++){        // Scan repeat
+         for(j=1; j<=unit_len; j++){   // Scan rep_unit
+             if( WrapDPsize <= next*i + j ){
+                 fprintf(stderr, "You need to increse the value of WrapDPsize.\n"); exit(EXIT_FAILURE);
+             }
+             if(rep[i] == rep_unit[j]){    // *1*-origin index !!!!
+                 WrapDP[next*i + j] = WrapDP[next*(i-1) + j-1]  + MATCH_GAIN;
+             }else{
+                 val_mismatch    = WrapDP[next*(i-1) + j-1]  - MISMATCH_PENALTY;
+                 val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
+                 if(j > 1){
+                     val_deletion = WrapDP[next*i + j-1] - INDEL_PENALTY;
+                     WrapDP[next*i + j] = MAX(0, MAX( MAX( val_mismatch, val_insertion), val_deletion));
+                 }else{
+                     WrapDP[next*i + j] = MAX(0, MAX( val_mismatch, val_insertion));
+                 }
+             }
+             if(max_wrd < WrapDP[next*i + j])
+             {
+                 max_wrd = WrapDP[next*i + j];
+                 max_i = i;
+                 max_j = j;
+             }
+         }
+         // wrap around
+         WrapDP[next*i + 0] = WrapDP[next*i + unit_len];
+     }
+     
+     // trace back the optimal alignment while storing it in the data structure "alignment"
+     int Num_matches = 0;
+     int Num_mismatches = 0;
+     int Num_insertions = 0;
+     int Num_deletions  = 0;
+     int Num_scanned_unit = 0;
+     
+     i = max_i;
+     j = max_j;
+     if(j == 0){ j = unit_len; } // 1-origin index
+     
+     while(i > 0 && WrapDP[next*i + j] > 0){                 // global alignment
+         val_match       = WrapDP[next*(i-1) + j-1]  + MATCH_GAIN;
+         val_mismatch    = WrapDP[next*(i-1) + j-1]  - MISMATCH_PENALTY;
+         val_insertion   = WrapDP[next*(i-1) + j]    - INDEL_PENALTY;
+         val_deletion    = WrapDP[next*i + j-1]      - INDEL_PENALTY;
+         
+         if( max_wrd == val_match          && rep[i] == rep_unit[j]){
+             max_wrd -= MATCH_GAIN;
+             i--; j--;
+             Num_matches++;
+             Num_scanned_unit++;
+         }else if( max_wrd == val_mismatch && rep[i] != rep_unit[j]){     // mismatch
+             max_wrd += MISMATCH_PENALTY;
+             i--; j--;
+             Num_mismatches++;
+             Num_scanned_unit++;
+         }else if( max_wrd == val_deletion){     // deletion
+             max_wrd += INDEL_PENALTY;
+             j--;
+             Num_deletions++;    // Num_insertions++;
+             Num_scanned_unit++;
+         }else if( max_wrd == val_insertion){    // insertion
+             max_wrd += INDEL_PENALTY;
+             i--;
+             Num_insertions++;
+             //Num_scanned_unit++;       // The base of the repeat unit is skipped.
+         }else if( max_wrd == 0){
+             break;
+         }else{
+             fprintf(stderr, "fatal error in wrap-around DP max_wrd = %i\n", max_wrd);
+             exit(EXIT_FAILURE);
+         }
+         if(j == 0){
+             j = unit_len;
+         }
+     }
+     
+     
+     // Consider the 1-origin index carefully
+     rr->rep_start           = query_start + i + 1;
+     rr->rep_end             = query_start + max_i;
+     //rr->rep_start           = query_start + i;
+     //rr->rep_end             = query_start + max_i - 1;
+     rr->repeat_len          = max_i - i; //max_i - 1;
+     rr->Num_freq_unit       = (int)Num_scanned_unit/unit_len;
+     rr->Num_matches         = Num_matches;
+     rr->Num_mismatches      = Num_mismatches;
+     rr->Num_insertions      = Num_insertions;
+     rr->Num_deletions       = Num_deletions;
+     rr->match_gain          = MATCH_GAIN;
+     rr->mismatch_penalty    = MISMATCH_PENALTY;
+     rr->indel_penalty       = INDEL_PENALTY;
+  
+     gettimeofday(&e, NULL);
+     time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
+ }
 
 
 void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
@@ -355,18 +357,22 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
     
-    // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
     set_rr( tmp_rr, rr );
-    wrap_around_DP_sub( query_start, query_end, tmp_rr, 5, 1, 1 );
+    int MATCH_GAIN        = 5;
+    int MISMATCH_PENALTY = 1;
+    int INDEL_PENALTY    = 1;
+    wrap_around_DP_sub( query_start, query_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
     
     float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
     
     if(rr_ratio < tmp_rr_ratio)
         set_rr( rr, tmp_rr );
     
-    // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
     set_rr( tmp_rr, rr );
-    wrap_around_DP_sub( query_start, query_end, tmp_rr, 1, 1, 3);
+    MATCH_GAIN        = 1;
+    MISMATCH_PENALTY = 1;
+    INDEL_PENALTY    = 3;
+    wrap_around_DP_sub( query_start, query_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
     tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
     if(rr_ratio < tmp_rr_ratio)
         set_rr( rr, tmp_rr );

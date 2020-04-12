@@ -40,13 +40,15 @@ float min_match_ratio;
 #define MAX_LEN_overlapping 10 // = MIN_PERIOD * MIN_NUM_FREQ_UNIT
 
 
-// The following values are optimzed for a benchmark dataset.
-#define MIN_WINDOW 5 //10 // 20  // Window size parameters for locating the boundaries of tandem repeats
+// The following values are optimzed for benchmark datasets.
+#define MIN_WINDOW 5 // Window size parameters for locating the boundaries of tandem repeats
 #define MAX_WINDOW 10240
-
+#define MIN_MAX_DI 0  // Setting this to 0.2 did not accelerate the performance.
+// de Bruijn graph search
 #define minKmer 5
 #define maxKmer 11      // Increase this when no qualified repeats are found.
 #define MAX_tiebreaks 1024
+#define MIN_jaccard_index 0.98
 
 #define BLK 4096        // Block size of input buffer.
 #define WrapDPsize  200000000    // 200M  = repeat_unit_size (200) x length_of_repeats (1,000,000)
@@ -54,7 +56,7 @@ float min_match_ratio;
 //  Choice of DeBruijn graph or progressive multiple alignment
 #define ProgressiveMultipleAlignment 0
 #define DeBruijnGraphSearch 1
-
+// Parameters for search the hash table
 #define count_maxKmer 6
 #define PrimeMax 256019
 
@@ -67,7 +69,6 @@ int *inputString_w_rand; // 4 decimal encoding of the input read string of lengt
 int *count;             // A table of size 4^k for counting sort.
 int **freqNode;         // A hash table for storing the frequency of each node (node, frequency)
 int *sortedString;      // Positions of 4-mers sorted wrt both 4-mers and their positions.
-
 double *directional_index_tmp;  // For storing all DI values temporarily for a given w
 double *directional_index;      // For storing a locally maximum DI
 int *directional_index_end;     // The end position of the local maximum
@@ -112,7 +113,6 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
 
 repeat_in_read *RRs;
 
-
 // External functions
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -136,10 +136,8 @@ void freq_2mer_array(int* val, int len, int *freq_2mer);
 void print_one_repeat_in_read(repeat_in_read rr);
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
 
-float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_count_table, time_chaining;
+float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_de_bruijn_graph_search, time_wrap_around_DP, time_count_table, time_chaining;
 int query_counter;
 
 //For debugging with #ifdef
-//#define DEBUG_forward_backward
 
-//#define DUMP_DI_Manhattan

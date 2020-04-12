@@ -60,7 +60,10 @@ public:
     int     Kmer;
     char    string[MAX_PERIOD];
     int     string_score[MAX_PERIOD];
-
+    int     match_gain;
+    int     mismatch_penalty;
+    int     indel_penalty;
+    
     Alignment(char* a_readID,
               int   a_inputLen,
               int   a_rep_start,
@@ -74,7 +77,10 @@ public:
               int   a_Num_deletions,
               int   a_Kmer,
               char* a_string,
-              int*  a_string_score)
+              int*  a_string_score,
+              int   a_match_gain,
+              int   a_mismatch_penalty,
+              int   a_indel_penalty  )
     {
 		start_x     = a_rep_start;
 		start_y	    = a_rep_start;
@@ -99,7 +105,9 @@ public:
         strcpy( string, a_string );
         for(int i=0; i<rep_period; i++){
             string_score[i] = a_string_score[i]; }
-        
+        match_gain       = a_match_gain;
+        mismatch_penalty = a_mismatch_penalty;
+        indel_penalty    = a_indel_penalty;
 	}
     
     void print_one_TR(int print_alignment)const{
@@ -142,7 +150,7 @@ public:
         
         if(print_alignment == 1){
             printf("\n");
-            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end);
+            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end, match_gain, mismatch_penalty, indel_penalty);
         }
         
         fflush(stdout);
@@ -310,7 +318,10 @@ void insert_an_alignment_into_set(
                       int   Num_deletions,
                       int   Kmer,
                       char* string,
-                      int*  string_score)
+                      int*  string_score,
+                      int   match_gain,
+                      int   mismatch_penalty,
+                      int   indel_penalty   )
 {
     set_of_alignments.insert(
                       new Alignment(
@@ -327,7 +338,10 @@ void insert_an_alignment_into_set(
                             Num_deletions,
                             Kmer,
                             string,
-                            string_score));
+                            string_score,
+                            match_gain,
+                            mismatch_penalty,
+                            indel_penalty   ));
 }
 
 void search_max(int print_alignment){
