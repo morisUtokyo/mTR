@@ -92,7 +92,6 @@ int main(int argc, char *argv[])
     time_all = 0; time_memory = 0; time_range = 0; time_period = 0;
     time_initialize_input_string = 0;
     time_count_table = 0;
-    time_de_bruijn_graph_search = 0;
     time_wrap_around_DP = 0; time_chaining = 0;
     query_counter = 0;
     
@@ -116,7 +115,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "%f\tComputing periods\n", time_period);
         fprintf(stderr, "\t%f\tInitialize the input\n", time_initialize_input_string);
         fprintf(stderr, "\t%f\tcount table generation\n",   time_count_table);
-        fprintf(stderr, "\t%f\tde Bruijn graph search\n",   time_de_bruijn_graph_search);
         fprintf(stderr, "\t%f\twrap around\n",   time_wrap_around_DP);
         fprintf(stderr, "\t%f\tchaining\n",   time_chaining);
         fprintf(stderr, "\t%i\tCount of queries\n", query_counter);

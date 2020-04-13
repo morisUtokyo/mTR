@@ -437,9 +437,8 @@ void fill_directional_index_PCC(int DI_array_length, int w, int k, int inputLen,
 }
 
  // A larger value produces a smaller number of candidate ranges and accelerates the computational performance but reduces the accuracy
-//float min_max_DI(int w){
-    //return(0);
-    //return(0);
+float min_max_DI(int w){
+    return(0);
     // The following heuristics for pruning the search space is likely to overlook true tandem repeats when the frequency of TRs is 10 or less.
     /*
     if(w <= 40){
@@ -450,7 +449,7 @@ void fill_directional_index_PCC(int DI_array_length, int w, int k, int inputLen,
         return(0.1);
     }
     */
-//}
+}
 
 void put_local_maximum_into_directional_index(int DI_array_length, int w){
     // Search for local maximums
@@ -463,7 +462,7 @@ void put_local_maximum_into_directional_index(int DI_array_length, int w){
         }
         if(local_max_i + w < i &&
            directional_index[local_max_i] < local_max &&
-           MIN_MAX_DI < local_max )
+           min_max_DI(w) < local_max )
         {
             // The position, local_max_i, was updated more than w before the current position i.
             // It must be also greater than the maximum at the position.
@@ -489,6 +488,7 @@ void put_local_maximum_into_directional_index(int DI_array_length, int w){
         }
     }
 }
+
 void remove_redundant_ranges(int inputLen){
     for(int i=0; i<inputLen; i++){
         int i_begin = i;
@@ -532,6 +532,7 @@ void remove_redundant_ranges(int inputLen){
     }
 }
 
+
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length){
     
     // initialize directional _index
@@ -567,21 +568,13 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
         }
     }
     
+    
     //  By removing random sequences of both ends, retain directional indexes of the input
     for(int i=0; i<inputLen; i++){
         int shifted_i = i + random_string_length;
-        if( 0 < directional_index[shifted_i] &&
-            directional_index_end[shifted_i] - random_string_length < inputLen )
-        {   // The tandem repeat needs to terminate before the end of the input sequence.
-            directional_index[i]    = directional_index[shifted_i];
-            directional_index_end[i]
-                = directional_index_end[shifted_i] - random_string_length;
-            directional_index_w[i]  = directional_index_w[shifted_i];
-        }else{
-            directional_index[i]    = -1;
-            directional_index_end[i]= -1;
-            directional_index_w[i]  = -1;
-        }
+        directional_index[i]    = directional_index[shifted_i];
+        directional_index_end[i]= directional_index_end[shifted_i] - random_string_length;
+        directional_index_w[i]  = directional_index_w[shifted_i];
     }
     for(int i=inputLen; i<DI_array_length; i++){
         directional_index[i]    = -1;
@@ -592,14 +585,4 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
     // Remove redundant ranges
     remove_redundant_ranges(inputLen);
     
-        
-#ifdef DEBUG_directional_index
-    for(int query_start=0; query_start < inputLen; query_start++){
-        int query_end = directional_index_end[query_start];
-        int width = query_end - query_start;
-        if( 0 < directional_index[query_start] ){
-            fprintf(stderr, "%i,\t%i,\t%i,\t%i,\t%f\n", query_start, query_end, width, directional_index_w[query_start], directional_index[query_start]);
-        }
-    }
-#endif
 }

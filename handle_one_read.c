@@ -179,10 +179,7 @@ void insert_an_alignment(repeat_in_read rr){
                                  rr.Num_deletions,
                                  rr.Kmer,
                                  rr.string,
-                                 rr.string_score,
-                                 rr.match_gain,
-                                 rr.mismatch_penalty,
-                                 rr.indel_penalty
+                                 rr.string_score
                                  );
 }
 
@@ -206,15 +203,12 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     
     int random_string_length;
     
-    // random_string_length = inputLen/2;  // Shorter random sequences did not improve the performance.
-
     if(inputLen < MAX_WINDOW * 2){
         random_string_length = inputLen;
     }else{
         random_string_length = MAX_WINDOW * 2;
     }
-
-
+    
     
     int DI_array_length = inputLen + random_string_length*2;
     
@@ -237,7 +231,7 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
         if(-1 < query_end && query_end < inputLen)
         {
             // Move onto de Bruijn graph construction
-            clear_rr(&RRs[0]); //clear_rr(&RRs[1]);
+            clear_rr(&RRs[0]); clear_rr(&RRs[1]);
             int width     = directional_index_w[query_start];
             
             find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0] );
@@ -245,7 +239,7 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
             query_counter++;
             // Examine if a qualified TR is found
             if( RRs[0].repeat_len > 0 &&
-                RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
+               RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
             {
                 insert_an_alignment(RRs[0]);
                 remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);

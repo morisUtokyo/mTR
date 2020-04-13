@@ -60,10 +60,7 @@ public:
     int     Kmer;
     char    string[MAX_PERIOD];
     int     string_score[MAX_PERIOD];
-    int     match_gain;
-    int     mismatch_penalty;
-    int     indel_penalty;
-    
+
     Alignment(char* a_readID,
               int   a_inputLen,
               int   a_rep_start,
@@ -77,10 +74,7 @@ public:
               int   a_Num_deletions,
               int   a_Kmer,
               char* a_string,
-              int*  a_string_score,
-              int   a_match_gain,
-              int   a_mismatch_penalty,
-              int   a_indel_penalty  )
+              int*  a_string_score)
     {
 		start_x     = a_rep_start;
 		start_y	    = a_rep_start;
@@ -105,9 +99,7 @@ public:
         strcpy( string, a_string );
         for(int i=0; i<rep_period; i++){
             string_score[i] = a_string_score[i]; }
-        match_gain       = a_match_gain;
-        mismatch_penalty = a_mismatch_penalty;
-        indel_penalty    = a_indel_penalty;
+        
 	}
     
     void print_one_TR(int print_alignment)const{
@@ -116,8 +108,8 @@ public:
            "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
            readID,
            inputLen,
-           rep_start+1, // 1-origin
-           rep_end+1,   // 1-origin
+           rep_start,
+           rep_end,
            repeat_len,
            rep_period,
            Num_freq_unit,
@@ -150,7 +142,7 @@ public:
         
         if(print_alignment == 1){
             printf("\n");
-            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end, match_gain, mismatch_penalty, indel_penalty);
+            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end);
         }
         
         fflush(stdout);
@@ -318,10 +310,7 @@ void insert_an_alignment_into_set(
                       int   Num_deletions,
                       int   Kmer,
                       char* string,
-                      int*  string_score,
-                      int   match_gain,
-                      int   mismatch_penalty,
-                      int   indel_penalty   )
+                      int*  string_score)
 {
     set_of_alignments.insert(
                       new Alignment(
@@ -338,10 +327,7 @@ void insert_an_alignment_into_set(
                             Num_deletions,
                             Kmer,
                             string,
-                            string_score,
-                            match_gain,
-                            mismatch_penalty,
-                            indel_penalty   ));
+                            string_score));
 }
 
 void search_max(int print_alignment){
