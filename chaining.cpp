@@ -108,8 +108,8 @@ public:
            "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
            readID,
            inputLen,
-           rep_start,
-           rep_end,
+           rep_start+1, // 1-origin
+           rep_end+1,   // 1-origin
            repeat_len,
            rep_period,
            Num_freq_unit,
