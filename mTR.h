@@ -103,12 +103,12 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     Num_insertions;
     int     Num_deletions;
     int     Kmer;
-    char    string[MAX_PERIOD];
-    int     string_score[MAX_PERIOD];
-    int     freq_2mer[16];
     int     match_gain;
     int     mismatch_penalty;
     int     indel_penalty;
+    char    string[MAX_PERIOD];
+    int     string_score[MAX_PERIOD];
+    int     freq_2mer[16];
 } repeat_in_read;
 
 repeat_in_read *RRs;
@@ -125,8 +125,6 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
 void init_inputString(int k, int query_start, int query_end, int inputLen);
 
 int search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr);
-//int search_De_Bruijn_graph(int query_start, int query_end, repeat_in_read *rr, repeat_in_read *tmp_rr);
-void polish_repeat(repeat_in_read *rr);
 void revise_representative_unit( repeat_in_read *rr);
 void wrap_around_DP(int query_start, int query_end, repeat_in_read *rr);
 void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int MATCH_GAIN, int MISMATCH_PENALTY, int INDEL_PENALTY );
@@ -141,6 +139,7 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 int query_counter;
 
 //For debugging with #ifdef
-//#define DEBUG_forward_backward
+
+//#define DEBUG_match_gain
 
 //#define DUMP_DI_Manhattan

@@ -93,22 +93,8 @@ void find_tandem_repeat_sub(int query_start, int query_end, repeat_in_read *rr )
         // Polish the repeat unit if it is short and its coverage is small.
         // Otherwise, the coverage would be large enough.
         int coverage = rr->repeat_len / rr->rep_period;
-        if( 5 <= coverage && coverage <= 20 && 10 < rr->rep_period){
-
-            polish_repeat(rr);
-#ifdef DEBUG_forward_backward
-            if(rr->rep_period > 0){
-                fprintf(stderr, "----- after polished\trep period = %i,\trange = (%i, %i),\tmat = %i,\tmis = %i,\tins = %i,\tdel = %i\n", rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_matches, rr->Num_mismatches, rr->Num_insertions, rr->Num_deletions);
-            }
-#endif
-
+        if( 5 <= coverage && coverage <= 20 && 5 < rr->rep_period){
             revise_representative_unit(rr);
-#ifdef DEBUG_forward_backward
-            if(rr->rep_period > 0){
-                fprintf(stderr, "------ after revised\trep period = %i,\trange = (%i, %i),\tmat = %i,\tmis = %i,\tins = %i,\tdel = %i\n", rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_matches, rr->Num_mismatches, rr->Num_insertions, rr->Num_deletions);
-            }
-#endif
-
         }
     }
 }
@@ -136,6 +122,7 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     clear_rr(tmp_rr);  // clear the space for the result
     
     for(int k = min_k; k <= max_k; k++){
+        // To rr, assign readID, inputLen and k-mer
         clear_rr(rr); strcpy( rr->readID, readID); rr->inputLen = inputLen; rr->Kmer = k;
         
         find_tandem_repeat_sub(query_start, query_end, rr);
@@ -178,6 +165,9 @@ void insert_an_alignment(repeat_in_read rr){
                                  rr.Num_insertions,
                                  rr.Num_deletions,
                                  rr.Kmer,
+                                 rr.match_gain,
+                                 rr.mismatch_penalty,
+                                 rr.indel_penalty,
                                  rr.string,
                                  rr.string_score
                                  );

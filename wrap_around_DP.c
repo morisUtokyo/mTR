@@ -54,13 +54,12 @@ int base_char2int(char c){
     }
 }
 
-void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end){
+void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end, int match_gain, int mismatch_penalty, int indel_penalty){
     
     // tentative
-    int MATCH_GAIN          = 1;  // 3 // 1 // 1
-    int MISMATCH_PENALTY    = 1;
-    int INDEL_PENALTY       = 3;  // 1 // 1 //3
-    
+    int MATCH_GAIN          = match_gain;
+    int MISMATCH_PENALTY    = mismatch_penalty;
+    int INDEL_PENALTY       = indel_penalty;
     
     int rep_unit[MAX_PERIOD];
     int intBase;
@@ -185,6 +184,9 @@ void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int 
         }
     }
 
+    // print the match gain and mismatch/indel penalties
+    printf("match gain = %i, mismatch penalty = %i, indel penalty = %i\n\n", MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
+    
     // print backward from the end of alignment arrays
     for(int i_start = pos-1; 0 <= i_start; i_start -= ALIGNMENT_WIDTH_PRINTING){
         int i_end;
@@ -342,6 +344,10 @@ void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int
     rr->Num_mismatches      = Num_mismatches;
     rr->Num_insertions      = Num_insertions;
     rr->Num_deletions       = Num_deletions;
+    
+    rr->match_gain          = MATCH_GAIN;
+    rr->mismatch_penalty    = MISMATCH_PENALTY;
+    rr->indel_penalty       = INDEL_PENALTY;
  
     gettimeofday(&e, NULL);
     time_wrap_around_DP += (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;
@@ -349,28 +355,42 @@ void wrap_around_DP_sub( int query_start, int query_end, repeat_in_read *rr, int
 
 
 void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
-
-    float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+    // Input:   rep_period, string, and string_score
+    // Outpur:  repeat_start, repeat_end, Num_freq_unit,
+    //          Num_matches, Num_mismatches, Num_insertions, Num_deletions,
+    //          match_gain, mismatch_penalty, and indel_penalty
     
-    repeat_in_read *tmp_rr;
+    //float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+    
+    repeat_in_read *tmp_rr, *max_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    max_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    clear_rr(tmp_rr);
+    clear_rr(max_rr);
+    float max_ratio = -1;
     
     // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
     set_rr( tmp_rr, rr );
     wrap_around_DP_sub( query_start, query_end, tmp_rr, 5, 1, 1 );
     
-    float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-    
-    if(rr_ratio < tmp_rr_ratio)
-        set_rr( rr, tmp_rr );
+    float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    if( max_ratio < tmp_ratio ){
+        set_rr( max_rr, tmp_rr );
+        max_ratio = tmp_ratio;
+    }
     
     // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
     set_rr( tmp_rr, rr );
     wrap_around_DP_sub( query_start, query_end, tmp_rr, 1, 1, 3);
     
-    tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-    if(rr_ratio < tmp_rr_ratio)
-        set_rr( rr, tmp_rr );
+    tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    if(max_ratio < tmp_ratio){
+        set_rr( max_rr, tmp_rr );
+        max_ratio = tmp_ratio;
+    }
+    
+    set_rr(rr, max_rr);
     
     free(tmp_rr);
+    free(max_rr);
 }

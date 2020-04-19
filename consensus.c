@@ -503,6 +503,7 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     int k = rr->Kmer;
     char readID[BLK];
     strcpy(readID, rr->readID);
+    
     init_inputString(k, query_start, query_end, inputLen);
     int width = query_end - query_start + 1;
     
@@ -512,49 +513,48 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     
     float max_ratio = -1;
     //int max_matches = -1;
-    int foundLoop;
+    int foundLoop=0;
     
-    repeat_in_read *tmp_rr;
+    repeat_in_read *tmp_rr, *max_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    max_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
     clear_rr(tmp_rr);
+    clear_rr(max_rr);
                                       
     if(MIN_NUM_FREQ_UNIT < maxFreq){
+        // Try forward (mnode=0) and backward (mode=1) searches
         for(int search_stat=0; search_stat<2; search_stat++){
             for(int i=0; i<num_maxNodes; i++){
                 maxNode = list_maxNodes[i];
 
                 // search forward or backward
                 if(search_stat == 0){
-                    clear_rr(rr); rr->Kmer = k; rr->inputLen = inputLen; strcpy(rr->readID, readID);
-                    foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, rr);
+                // forward
+                    set_rr(tmp_rr, rr);
+                    foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, tmp_rr);
                 }else{
+                // backward
                     int subgoalNode;
                     char subgoalString[MAX_PERIOD];
-                    clear_rr(rr); rr->Kmer = k; rr->inputLen = inputLen; strcpy(rr->readID, readID);
-                    foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, rr, &subgoalNode, subgoalString);
+                    set_rr(tmp_rr, rr);
+                    foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, tmp_rr, &subgoalNode, subgoalString);
                 }
-                
+                // Each of forward and backward searches determine
+                // rep_period, string, and string_score
                 if(foundLoop == 1){
-                    wrap_around_DP(query_start, query_end, rr);
-#ifdef DEBUG_forward_backward
-                    if(search_stat == 0){
-                        fprintf(stderr, "forward,  ");
-                    }else{
-                        fprintf(stderr, "backward, ");
-                    }
-                    fprintf(stderr, "k = %i,\tmaxFreq = %i,\tnum_maxNodes = %i,\trange = (%i, %i),\trep period = %i,\tunit string = %s \n", k, maxFreq, num_maxNodes, rr->rep_start, rr->rep_end, rr->rep_period, rr->string);
-#endif
-                    float tmp_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
-                    // float tmp_ratio = (float)rr->Num_matches/rr->repeat_len;
+                    wrap_around_DP(query_start, query_end, tmp_rr);
+                    // Returns repeat_start, repeat_end, Num_freq_unit,
+                    // Num_matches, Num_mismatches, Num_insertions, Num_deletions,
+                    // match_gain, mismatch_penalty, and indel_penalty
+
+                    float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
                     if(max_ratio < tmp_ratio &&
-                       //max_matches < rr->Num_matches &&
                        min_match_ratio <= tmp_ratio &&
-                       MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
-                       MIN_PERIOD <= rr->rep_period )
+                       MIN_NUM_FREQ_UNIT < tmp_rr->Num_freq_unit &&
+                       MIN_PERIOD <= tmp_rr->rep_period )
                     {
                         max_ratio = tmp_ratio;
-                        //max_matches = rr->Num_matches;
-                        set_rr(tmp_rr, rr);
+                        set_rr(max_rr, tmp_rr);
                     }
                     // exit if one loop is found
                     break;
@@ -562,18 +562,11 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
             }
         }
     }
-    set_rr(rr, tmp_rr);
+    set_rr(rr, max_rr);
     free(tmp_rr);
-#ifdef DEBUG_forward_backward
-    if(rr->rep_period > 0){
-        fprintf(stderr, "----- before polished\trep period = %i,\trange = (%i, %i),\tmat = %i,\tmis = %i,\tins = %i,\tdel = %i\n", rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_matches, rr->Num_mismatches, rr->Num_insertions, rr->Num_deletions);
-    }
-#endif
-    
+    free(max_rr);
     return(foundLoop);
-        
 }
-
 
 int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int_unit, int width){
     
@@ -694,13 +687,126 @@ void polish_repeat(repeat_in_read *rr){
         rr->string[i] = c;
     }
     rr->string[rr->rep_period] = '\0';
-    
-    wrap_around_DP_sub(rr->rep_start, rr->rep_end, rr, rr->match_gain, rr->mismatch_penalty, rr->indel_penalty);
 }
 
-// Columns from the top represent mismatch ratios: 0.25, 0.2, 0.15, 0.1, 0.05, and 0.025.
-// Rows are read coverages that range from 0 to 20.
-// p/4, significance 0.05/200
+// Table for K's value for p(K) / (8 x |u|), where |u| is the length of repeat unit
+// The laegest  10  blocks for repeat unit length
+//   u = 200, 150, 100, 75, 50, 30, 20, 10, 5, 2
+// The middle   10  blocks for error rate
+//   0.25, 0.225, 0.2, 0.175, 0.15, 0.125, 0.1, 0.075, 0.05, 0.02.
+// The smallest 20 blocks for frequency of repeat units from 1 to 20.
+
+// Significance = 1%
+int min_missing_bases[10][10][20] ={
+// Num of hypotheses =  1600
+{
+{1,2,3,4,4,4,5,5,5,6,6,6,6,7,7,7,7,7,8,8},{1,2,3,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7,8},
+{1,2,3,4,4,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7},{1,2,3,3,4,4,4,5,5,5,5,5,6,6,6,6,6,7,7,7},
+{1,2,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,6,6},{1,2,3,3,3,4,4,4,4,5,5,5,5,5,5,5,6,6,6,6},
+{1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,5,6},{1,2,3,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5},
+{1,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4},{1,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3}},
+// Num of hypotheses =  1200
+{
+{1,2,3,4,4,4,5,5,5,6,6,6,6,7,7,7,7,7,8,8},{1,2,3,4,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7,7},
+{1,2,3,3,4,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7},{1,2,3,3,4,4,4,4,5,5,5,5,6,6,6,6,6,6,7,7},
+{1,2,3,3,4,4,4,4,4,5,5,5,5,5,6,6,6,6,6,6},{1,2,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6,6},
+{1,2,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5,5},{1,2,2,3,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5,5},
+{1,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4},{1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3}},
+// Num of hypotheses =  800
+{
+{1,2,3,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7,8},{1,2,3,3,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7},
+{1,2,3,3,4,4,4,5,5,5,5,5,6,6,6,6,6,7,7,7},{1,2,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,6,7},
+{1,2,3,3,3,4,4,4,4,5,5,5,5,5,5,6,6,6,6,6},{1,2,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5,6,6},
+{1,2,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5,5,5,5},{1,2,2,3,3,3,3,3,4,4,4,4,4,4,4,4,4,5,5,5},
+{1,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4},{1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3}},
+// Num of hypotheses =  600
+{
+{1,2,3,3,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7,7},{1,2,3,3,4,4,4,5,5,5,5,6,6,6,6,6,7,7,7,7},
+{1,2,3,3,4,4,4,4,5,5,5,5,6,6,6,6,6,6,7,7},{1,2,3,3,4,4,4,4,5,5,5,5,5,5,6,6,6,6,6,6},
+{1,2,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6,6},{1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6,6},
+{1,2,2,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5,5,5},{1,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,5,5},
+{1,2,2,2,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4},{1,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3}},
+// Num of hypotheses =  400
+{
+{1,2,3,3,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7},{1,2,3,3,4,4,4,5,5,5,5,5,6,6,6,6,6,7,7,7},
+{1,2,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,6,7},{1,2,3,3,3,4,4,4,4,5,5,5,5,5,5,6,6,6,6,6},
+{1,2,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6,6,6},{1,2,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5,5},
+{1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5},{1,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,5},
+{1,2,2,2,2,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4},{1,1,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3}},
+// Num of hypotheses =  240
+{
+{1,2,3,3,4,4,4,5,5,5,5,5,6,6,6,6,6,7,7,7},{1,2,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,7,7},
+{1,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,6},{1,2,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6,6},
+{1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6,6},{1,2,2,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5},
+{1,2,2,3,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5},{1,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4},
+{1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,4,4,4,4},{1,1,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3}},
+// Num of hypotheses =  160
+{
+{1,2,3,3,4,4,4,4,5,5,5,5,6,6,6,6,6,7,7,7},{1,2,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,6,6,7},
+{1,2,3,3,3,4,4,4,4,5,5,5,5,5,5,6,6,6,6,6},{1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6},
+{1,2,2,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5,6},{1,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5},
+{1,2,2,2,3,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5},{1,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4},
+{1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,4,4,4},{1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3}},
+// Num of hypotheses =  80
+{
+{1,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,7},{1,2,3,3,3,4,4,4,4,4,5,5,5,5,5,6,6,6,6,6},
+{1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6},{1,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6},
+{1,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5},{1,2,2,2,3,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5},
+{1,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4},{1,2,2,2,2,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4},
+{1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3},{1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3}},
+// Num of hypotheses =  40
+{
+{1,2,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6},{1,2,2,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6},
+{1,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6},{1,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5},
+{1,2,2,2,3,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5},{1,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,5},
+{1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4},{1,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,4,4,4},
+{1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3},{1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}},
+// Num of hypotheses =  16
+{
+{1,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6},{1,2,2,3,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5},
+{1,2,2,2,3,3,3,3,4,4,4,4,4,4,4,5,5,5,5,5},{1,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5},
+{1,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,5},{1,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4},
+{1,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,4,4,4,4},{1,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3},
+{1,1,1,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3},{1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2}}
+};
+
+int min_missing(int rep_period, double error, int coverage){
+    // unit length
+    int i;
+    float r = 1;  // lower bound
+         if(rep_period > r * 200 ){ i = 0; }
+    else if(rep_period > r * 150 ){ i = 1; }
+    else if(rep_period > r * 100 ){ i = 2; }
+    else if(rep_period > r *  75 ){ i = 3; }
+    else if(rep_period > r *  50 ){ i = 4; }
+    else if(rep_period > r *  30 ){ i = 5; }
+    else if(rep_period > r *  20 ){ i = 6; }
+    else if(rep_period > r *  10 ){ i = 7; }
+    else if(rep_period > r *   5 ){ i = 8; }
+    else{                           i = 9; }
+    // error rate
+    int j;
+    r = 1;       // lower bound
+         if(error > r * 0.25  ){ j = 0; }
+    else if(error > r * 0.225 ){ j = 1; }
+    else if(error > r * 0.2   ){ j = 2; }
+    else if(error > r * 0.175 ){ j = 3; }
+    else if(error > r * 0.15  ){ j = 4; }
+    else if(error > r * 0.125 ){ j = 5; }
+    else if(error > r * 0.1   ){ j = 6; }
+    else if(error > r * 0.075 ){ j = 7; }
+    else if(error > r * 0.05  ){ j = 8; }
+    else{                        j = 9; }
+    int k;  // 1-origin -> 0-origin
+         if( coverage <= 1 ){ k = 0;  }
+    else if( coverage >= 20){ k = 19; }
+    else{                    k = coverage-1; }
+    
+    return( min_missing_bases[i][j][k] );
+}
+
+/*
+// p/4, significance 0.05/200 (8 x l=25)
 int min_missing_bases[6][21] = {
     0,1,2,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,
     0,1,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,5,6,
@@ -710,33 +816,9 @@ int min_missing_bases[6][21] = {
     0,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 };
 
-// p, significance 0.05
-/*
-int min_missing_bases[6][21] = {
-    0,1,2,2,3,3,3,4,4,4,5,5,6,6,6,7,7,7,8,8,8,
-    0,1,1,2,2,3,3,3,4,4,4,5,5,5,5,6,6,6,7,7,7,
-    0,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,
-    0,1,1,1,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,
-    0,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,3,3,3,3,
-    0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2
-};
- */
-/*
-// p/4, significance 0.05/400
-int min_missing_bases[6][21] = {
-    0,1,2,3,3,3,4,4,4,4,5,5,5,5,5,6,6,6,6,6,7,
-    0,1,2,3,3,3,3,4,4,4,4,4,5,5,5,5,5,5,6,6,6,
-    0,1,2,2,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,
-    0,1,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,
-    0,1,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,
-    0,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3
-};
-*/
-
-
 int min_missing(double ratio, int coverage){
     int col, row;
-    
+ 
     if(ratio > 0.225){        row = 0; }
     else if(ratio > 0.175 ){  row = 1; }
     else if(ratio > 0.125 ){  row = 2; }
@@ -748,6 +830,7 @@ int min_missing(double ratio, int coverage){
     
     return(min_missing_bases[row][col]);
 }
+*/
 
 // This function is not effective in increasing the accuracy of predicting repeat units perfectly
 //void revise_representative_unit( repeat_in_read *rr,  char *string, int unit_len, int query_start, int query_end){
@@ -900,8 +983,8 @@ void revise_representative_unit_sub( repeat_in_read *rr, int MATCH_GAIN, int MIS
         int coverage = rr->repeat_len / rr->rep_period;
         if( 5 <= coverage && coverage <= 20 ){
             double mismatch_ratio = (double)(rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
-            //double indel_ratio = (double)(rr->Num_insertions + rr->Num_deletions) / rr->repeat_len;
-            if( min_missing(mismatch_ratio, coverage) <= max_v &&
+            if( min_missing(rr->rep_period, mismatch_ratio, coverage) <= max_v &&
+            //if( min_missing(mismatch_ratio, coverage) <= max_v &&
                 0 <= max_missing && max_missing <= 3)
             {
                 rep_unit_before[rep_j] = 4;
@@ -949,16 +1032,21 @@ void revise_representative_unit_sub( repeat_in_read *rr, int MATCH_GAIN, int MIS
 }
 
 void revise_representative_unit( repeat_in_read *rr ){
- 
-    float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
     
+    // Polish the reapt unit first.
+    polish_repeat(rr);
+    // wrap_around_DP_sub( rr->rep_start, rr->rep_end, rr, rr->match_gain, rr->mismatch_penalty, rr->indel_penalty );
+    // This needs additional time but does not improve the accuracy so much.
+    
+    float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
-    
+ 
     // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
     set_rr( tmp_rr, rr );
     int MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY;
     MATCH_GAIN = 5; MISMATCH_PENALTY = 1; INDEL_PENALTY = 1;
+    
     revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
     wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
     float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
@@ -968,13 +1056,34 @@ void revise_representative_unit( repeat_in_read *rr ){
     // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
     set_rr( tmp_rr, rr );
     MATCH_GAIN = 1; MISMATCH_PENALTY = 1; INDEL_PENALTY = 3;
+    
     revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
     wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
     tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
     if(rr_ratio < tmp_rr_ratio)
         set_rr( rr, tmp_rr );
-    
+
     free(tmp_rr);
+
+    /*  Using the running gain and penalty only is less accurate than using two patters as above.
+        int MATCH_GAIN       = rr->match_gain;
+        int MISMATCH_PENALTY = rr->mismatch_penalty;
+        int INDEL_PENALTY    = rr->indel_penalty;
+        
+        repeat_in_read *tmp_rr;
+        tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+        set_rr( tmp_rr, rr );
+        
+        revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
+        wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
+        
+        float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
+        float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+        if(rr_ratio < tmp_rr_ratio)
+            set_rr( rr, tmp_rr );
+        free(tmp_rr);
+    */
+    
 }
 
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k){

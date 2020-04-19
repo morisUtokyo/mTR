@@ -58,6 +58,9 @@ public:
     int     Num_insertions;
     int     Num_deletions;
     int     Kmer;
+    int     match_gain;
+    int     mismatch_penalty;
+    int     indel_penalty;
     char    string[MAX_PERIOD];
     int     string_score[MAX_PERIOD];
 
@@ -73,6 +76,9 @@ public:
               int   a_Num_insertions,
               int   a_Num_deletions,
               int   a_Kmer,
+              int   a_match_gain,
+              int   a_mismatch_penalty,
+              int   a_indel_penalty,
               char* a_string,
               int*  a_string_score)
     {
@@ -95,7 +101,10 @@ public:
         Num_mismatches  = a_Num_mismatches;
         Num_insertions  = a_Num_insertions;
         Num_deletions   = a_Num_deletions;
-        Kmer        = a_Kmer;
+        Kmer            = a_Kmer;
+        match_gain      = a_match_gain;
+        mismatch_penalty= a_mismatch_penalty;
+        indel_penalty   = a_indel_penalty;
         strcpy( string, a_string );
         for(int i=0; i<rep_period; i++){
             string_score[i] = a_string_score[i]; }
@@ -142,7 +151,7 @@ public:
         
         if(print_alignment == 1){
             printf("\n");
-            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end);
+            pretty_print_alignment( const_cast<char*>(string), rep_period, rep_start, rep_end, match_gain, mismatch_penalty, indel_penalty);
         }
         
         fflush(stdout);
@@ -309,6 +318,9 @@ void insert_an_alignment_into_set(
                       int   Num_insertions,
                       int   Num_deletions,
                       int   Kmer,
+                      int   match_gain,
+                      int   mismatch_penalty,
+                      int   indel_penalty,
                       char* string,
                       int*  string_score)
 {
@@ -326,6 +338,9 @@ void insert_an_alignment_into_set(
                             Num_insertions,
                             Num_deletions,
                             Kmer,
+                            match_gain,
+                            mismatch_penalty,
+                            indel_penalty,
                             string,
                             string_score));
 }
