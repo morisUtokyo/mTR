@@ -647,7 +647,6 @@ void polish_repeat(repeat_in_read *rr){
                     bestNode = alternativeNode;
                 }
             }
-            
             if(bestNode == refNode){    // No need to revise the next node
                 int_revised_unit[ j_revised-- ] = int_unit[ j-- ];
             }else{  // Use next three bases to calculate the score
@@ -657,7 +656,6 @@ void polish_repeat(repeat_in_read *rr){
                 if( bestNode / pow4[k-1] == int_unit[ (j-1) % rep_period] ){
                     score_ins = score_for_alignment( j-2, k, bestNode, rep_period, int_unit, width);
                 }
-                
                 int_revised_unit[ j_revised-- ] = bestNode / pow4[k-1]; // The first base
 
                 int max_score = MAX( MAX(score_del, score_sub), score_ins);
@@ -677,7 +675,6 @@ void polish_repeat(repeat_in_read *rr){
         }
     }
     rr->rep_period = (MAX_PERIOD-1) - j_revised;
-    
     // Change Num_matches etc. using wrap around DP
     for(int i = 0; i < rr->rep_period; i++){
         char c;
@@ -1039,7 +1036,6 @@ void revise_representative_unit( repeat_in_read *rr ){
     
     // Polish the reapt unit first.
     polish_repeat(rr);
-    
     // wrap_around_DP_sub( rr->rep_start, rr->rep_end, rr, rr->match_gain, rr->mismatch_penalty, rr->indel_penalty );
     // This needs additional time but does not improve the accuracy so much.
     

@@ -108,8 +108,6 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     freq_2mer[16];
 } repeat_in_read;
 
-repeat_in_read *RRs;
-
 // External functions
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))

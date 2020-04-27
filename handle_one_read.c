@@ -113,7 +113,6 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         min_k = minKmer;        // 5
         max_k = maxKmer;        // 11
     }
-
     float max_ratio = -1;
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
@@ -138,37 +137,6 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         }
     }
     free(tmp_rr);
-    
-/*
-    float max_ratio = -1;
-    repeat_in_read *tmp_rr;
-    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
-    clear_rr(tmp_rr);  // clear the space for the result
-    
-    for(int k = min_k; k <= max_k; k++){
-        // To rr, assign readID, inputLen and k-mer
-        //clear_rr(tmp_rr); strcpy( tmp_rr->readID, readID); tmp_rr->inputLen = inputLen; tmp_rr->Kmer = k;
-        clear_rr(rr); strcpy( rr->readID, readID); rr->inputLen = inputLen; rr->Kmer = k;
-        
-        //find_tandem_repeat_sub(query_start, query_end, tmp_rr);
-        find_tandem_repeat_sub(query_start, query_end, rr);
-        
-        //float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-        float tmp_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
-        if(max_ratio < tmp_ratio &&
-           min_match_ratio <= tmp_ratio &&
-           MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
-           MIN_PERIOD <= rr->rep_period )
-        {
-            max_ratio = tmp_ratio;
-            //max_matches = rr->Num_matches;
-            //set_rr(rr, tmp_rr);
-            set_rr(tmp_rr, rr);
-        }
-    }
-    set_rr(rr, tmp_rr);
-    free(tmp_rr);
- */
 }
 
 void insert_an_alignment(repeat_in_read rr){

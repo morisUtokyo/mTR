@@ -49,7 +49,6 @@ extern "C" {
                           char* string,
                           int*  string_score);
     void chaining(int print_alignment);
-    //void search_max(int print_alignment);
     void delete_set_of_alignments();
     extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end, int match_gain, int mismatch_penalty, int indel_penalty);
     extern void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);

@@ -46,7 +46,6 @@ void free_global_variables_and_exit(){
         if( gaps[i] != NULL ){ free(freqNode[i]); }
     }
     if(sortedString      != NULL){ free(sortedString); }
-    if(RRs               != NULL){ free(RRs);}
     if(directional_index_tmp != NULL){ free(directional_index_tmp); }
     if(directional_index != NULL){ free(directional_index); }
     if(directional_index_end != NULL){ free(directional_index_end); }
@@ -102,9 +101,6 @@ void malloc_global_variables(){
     
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( sortedString == NULL ){ free_global_variables_and_exit(); }
-    
-    RRs = (repeat_in_read*) malloc(3*sizeof(repeat_in_read));
-    if( RRs == NULL ){ free_global_variables_and_exit(); }
     
     directional_index_tmp   = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
     if( directional_index_tmp == NULL ){ free_global_variables_and_exit(); }
@@ -166,7 +162,6 @@ void free_global_variables(){
     for(int i=0; i<PrimeMax; i++){ free(freqNode[i]); }
     free(freqNode);
     free(sortedString);
-    free(RRs);
     free(directional_index_tmp);
     free(directional_index);
     free(directional_index_end);
