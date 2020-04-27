@@ -113,42 +113,62 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         min_k = minKmer;        // 5
         max_k = maxKmer;        // 11
     }
-    
+
     float max_ratio = -1;
-    //int max_matches = -1;
+    repeat_in_read *tmp_rr;
+    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
     
+    for(int k = min_k; k <= max_k; k++){
+        // To rr, assign readID, inputLen and k-mer
+        clear_rr(tmp_rr);
+        strcpy( tmp_rr->readID, readID);
+        tmp_rr->inputLen = inputLen;
+        tmp_rr->Kmer = k;
+        
+        find_tandem_repeat_sub(query_start, query_end, tmp_rr);
+        
+        float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+        if(max_ratio < tmp_ratio &&
+           min_match_ratio <= tmp_ratio &&
+           MIN_NUM_FREQ_UNIT < tmp_rr->Num_freq_unit &&
+           MIN_PERIOD <= tmp_rr->rep_period )
+        {
+            max_ratio = tmp_ratio;
+            set_rr(rr, tmp_rr);
+        }
+    }
+    free(tmp_rr);
+    
+/*
+    float max_ratio = -1;
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
     clear_rr(tmp_rr);  // clear the space for the result
     
     for(int k = min_k; k <= max_k; k++){
         // To rr, assign readID, inputLen and k-mer
+        //clear_rr(tmp_rr); strcpy( tmp_rr->readID, readID); tmp_rr->inputLen = inputLen; tmp_rr->Kmer = k;
         clear_rr(rr); strcpy( rr->readID, readID); rr->inputLen = inputLen; rr->Kmer = k;
         
+        //find_tandem_repeat_sub(query_start, query_end, tmp_rr);
         find_tandem_repeat_sub(query_start, query_end, rr);
-        //find_tandem_repeat_sub(query_start, query_end, rr, tmp_rr);
         
+        //float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
         float tmp_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
         if(max_ratio < tmp_ratio &&
-           //max_matches < rr->Num_matches &&
            min_match_ratio <= tmp_ratio &&
            MIN_NUM_FREQ_UNIT < rr->Num_freq_unit &&
            MIN_PERIOD <= rr->rep_period )
         {
             max_ratio = tmp_ratio;
             //max_matches = rr->Num_matches;
+            //set_rr(rr, tmp_rr);
             set_rr(tmp_rr, rr);
         }
     }
     set_rr(rr, tmp_rr);
     free(tmp_rr);
-#ifdef DEBUG_forward_backward
-    if(rr->rep_period >= 0){
-        fprintf(stderr, "##### rr k = %i, rep period = %i, range = (%i,%i), freq = %i\n\n", rr->Kmer, rr->rep_period, rr->rep_start, rr->rep_end, rr->Num_freq_unit);
-    }else{
-        //fprintf(stderr, "#---- none found\n");
-    }
-#endif
+ */
 }
 
 void insert_an_alignment(repeat_in_read rr){
@@ -185,11 +205,10 @@ void remove_redundant_ranges_from_directional_index(int query_start, int query_e
     }
 }
 
-void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_alignment){
+void handle_one_TR(char *readID, int inputLen, int print_alignment){
     //
     // Locate overlapping regions of tandem repeats
     //
-    //int random_string_length = 10;
     
     int random_string_length;
     
@@ -198,7 +217,6 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     }else{
         random_string_length = MAX_WINDOW * 2;
     }
-    
     
     int DI_array_length = inputLen + random_string_length*2;
     
@@ -216,33 +234,35 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     struct timeval s_time, e_time;
     gettimeofday(&s_time, NULL);
     
+    repeat_in_read *tmp_rr;
+    tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    
     for(int query_start=0; query_start < inputLen; query_start++){
         int query_end = directional_index_end[query_start];
         if(-1 < query_end && query_end < inputLen)
         {
             // Move onto de Bruijn graph construction
-            clear_rr(&RRs[0]); clear_rr(&RRs[1]);
             int width     = directional_index_w[query_start];
+            clear_rr(tmp_rr);
             
-            find_tandem_repeat( query_start, query_end, width, readID, inputLen, &RRs[0] );
+            find_tandem_repeat( query_start, query_end, width, readID, inputLen, tmp_rr );
             
             query_counter++;
             // Examine if a qualified TR is found
-            if( RRs[0].repeat_len > 0 &&
-               RRs[0].rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < RRs[0].rep_end )
+            if( tmp_rr->repeat_len > 0 &&
+                tmp_rr->rep_start + MIN_PERIOD * MIN_NUM_FREQ_UNIT < tmp_rr->rep_end )
             {
-                insert_an_alignment(RRs[0]);
-                remove_redundant_ranges_from_directional_index(RRs[0].rep_start, RRs[0].rep_end);
+                insert_an_alignment(*tmp_rr);
+                remove_redundant_ranges_from_directional_index(tmp_rr->rep_start, tmp_rr->rep_end);
             }
         }
     }
+    free(tmp_rr);
+    
     struct timeval s_time_chaining, e_time_chaining;
     gettimeofday(&s_time_chaining, NULL);
     
-    if(print_multiple_TR)
-        chaining(print_alignment);
-    else
-        search_max(print_alignment);
+    chaining(print_alignment);
     
     gettimeofday(&e_time_chaining, NULL);
     time_chaining += (e_time_chaining.tv_sec - s_time_chaining.tv_sec) + (e_time_chaining.tv_usec - s_time_chaining.tv_usec)*1.0E-6;
@@ -253,9 +273,9 @@ void handle_one_TR(char *readID, int inputLen, int print_multiple_TR, int print_
     
 }
 
-void handle_one_read(char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment)
+void handle_one_read(char *readID, int inputLen, int read_cnt, int print_alignment)
 {
-    handle_one_TR(readID, inputLen, print_multiple_TR, print_alignment);
+    handle_one_TR(readID, inputLen, print_alignment);
 }
 
 

@@ -573,8 +573,9 @@ int score_for_alignment(int start, int k, int bestNode, int rep_period, int* int
     // Return the sum of the frequencies of the l-mers with the nucleotide at the "start" position
     int tmpNode = bestNode;
     int sumFreq = 0;
-    for( int j = start; start - k < j; j--){ // wrap around
+    for( int j = start; 0 <= j && start - k < j; j--){ // wrap around
         tmpNode = int_unit[ j%rep_period ] * pow4[k-1] + (tmpNode / 4) ;
+        //fprintf(stderr, "start = %i, j = %i, tmpNode = %i, k = %i, width = %i, rep_period = %i\n", start, j, tmpNode, k, width, rep_period);
         sumFreq += freq_node(tmpNode, k, width);
     }
     return(sumFreq);
@@ -646,6 +647,7 @@ void polish_repeat(repeat_in_read *rr){
                     bestNode = alternativeNode;
                 }
             }
+            
             if(bestNode == refNode){    // No need to revise the next node
                 int_revised_unit[ j_revised-- ] = int_unit[ j-- ];
             }else{  // Use next three bases to calculate the score
@@ -655,6 +657,7 @@ void polish_repeat(repeat_in_read *rr){
                 if( bestNode / pow4[k-1] == int_unit[ (j-1) % rep_period] ){
                     score_ins = score_for_alignment( j-2, k, bestNode, rep_period, int_unit, width);
                 }
+                
                 int_revised_unit[ j_revised-- ] = bestNode / pow4[k-1]; // The first base
 
                 int max_score = MAX( MAX(score_del, score_sub), score_ins);
@@ -674,6 +677,7 @@ void polish_repeat(repeat_in_read *rr){
         }
     }
     rr->rep_period = (MAX_PERIOD-1) - j_revised;
+    
     // Change Num_matches etc. using wrap around DP
     for(int i = 0; i < rr->rep_period; i++){
         char c;
@@ -1035,6 +1039,7 @@ void revise_representative_unit( repeat_in_read *rr ){
     
     // Polish the reapt unit first.
     polish_repeat(rr);
+    
     // wrap_around_DP_sub( rr->rep_start, rr->rep_end, rr, rr->match_gain, rr->mismatch_penalty, rr->indel_penalty );
     // This needs additional time but does not improve the accuracy so much.
     
@@ -1064,26 +1069,6 @@ void revise_representative_unit( repeat_in_read *rr ){
         set_rr( rr, tmp_rr );
 
     free(tmp_rr);
-
-    /*  Using the running gain and penalty only is less accurate than using two patters as above.
-        int MATCH_GAIN       = rr->match_gain;
-        int MISMATCH_PENALTY = rr->mismatch_penalty;
-        int INDEL_PENALTY    = rr->indel_penalty;
-        
-        repeat_in_read *tmp_rr;
-        tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
-        set_rr( tmp_rr, rr );
-        
-        revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
-        wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
-        
-        float rr_ratio = (float)rr->Num_matches / (rr->Num_matches + rr->Num_mismatches + rr->Num_insertions + rr->Num_deletions);
-        float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-        if(rr_ratio < tmp_rr_ratio)
-            set_rr( rr, tmp_rr );
-        free(tmp_rr);
-    */
-    
 }
 
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k){

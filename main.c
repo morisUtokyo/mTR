@@ -99,9 +99,7 @@ int main(int argc, char *argv[])
     struct timeval s, e;
     gettimeofday(&s, NULL);
     
-    int print_multiple_TR = 1;
-    int read_cnt = handle_one_file(inputFile, print_multiple_TR, print_alignment);
-    //fprintf(stderr, "The number of processed reads is %i.\n", read_cnt);
+    int read_cnt = handle_one_file(inputFile, print_alignment);
     
     gettimeofday(&e, NULL);
     time_all = (e.tv_sec - s.tv_sec) + (e.tv_usec - s.tv_usec)*1.0E-6;

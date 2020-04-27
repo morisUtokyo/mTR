@@ -55,8 +55,6 @@ void free_global_variables_and_exit(){
     if(vector1           != NULL){ free(vector1); }
     if(vector2           != NULL){ free(vector2); }
     if(freq_interval_len != NULL){ free(freq_interval_len); }
-    //if(count_period_all  != NULL){ free(count_period_all); }
-    //if(rep_unit_string   != NULL){ free(rep_unit_string); }
     if(WrapDP            != NULL){ free(WrapDP); }
     if(alignment_input   != NULL){ free(alignment_input); }
     if(alignment_symbols != NULL){ free(alignment_symbols); }
@@ -105,7 +103,7 @@ void malloc_global_variables(){
     sortedString    = (int *)malloc(sizeof(int) * MAX_INPUT_LENGTH);
     if( sortedString == NULL ){ free_global_variables_and_exit(); }
     
-    RRs = (repeat_in_read*) malloc(2*sizeof(repeat_in_read));
+    RRs = (repeat_in_read*) malloc(3*sizeof(repeat_in_read));
     if( RRs == NULL ){ free_global_variables_and_exit(); }
     
     directional_index_tmp   = (double *)malloc(sizeof(double) * MAX_INPUT_LENGTH);
@@ -177,8 +175,6 @@ void free_global_variables(){
     free(vector1);
     free(vector2);
     free(freq_interval_len);
-    //free(count_period_all);
-    //free(rep_unit_string);
     free(WrapDP);
     free(alignment_input);
     free(alignment_symbols);
@@ -190,7 +186,7 @@ void free_global_variables(){
     
 }
 
-int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment){
+int handle_one_file(char *inputFile, int print_alignment){
     //---------------------------------------------------------------------------
     // Feed a string from a file, convert the string into a series of integers
     //---------------------------------------------------------------------------
@@ -226,7 +222,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment)
                 firstRead = 0;
             }else{  // Process the previous read if the current read is not the first one.
                 inputLen = cnt;
-                handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, print_alignment);
+                handle_one_read(readID, inputLen, read_cnt, print_alignment);
                 read_cnt++;
             }
             // Feed the header of the read.
@@ -259,7 +255,7 @@ int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment)
         }
     }
     inputLen = cnt;
-    handle_one_read(readID, inputLen, read_cnt, print_multiple_TR, print_alignment);
+    handle_one_read(readID, inputLen, read_cnt, print_alignment);
     read_cnt++;
 
     

@@ -29,19 +29,17 @@
 
 // Key default parameters
 #define MAX_INPUT_LENGTH 1000000 // The maximum length of each read
-int Manhattan_Distance;         // The default setting is 1 in the main.
 #define MIN_MATCH_RATIO 0.6      // The minimum threshold of match ratio　between the estimated repeat unit and the repeat in a given raw read
-float min_match_ratio;
 #define MIN_PERIOD 2            // Minimum period length
 #define MAX_PERIOD 500          // Maximum period length
-#define MAX_PERIOD_FREQ 100     // The maximum frequency threshold for revising missing bases
 #define MIN_NUM_FREQ_UNIT 5     // The minimum threshold of number of units
+
 #define ALIGNMENT_WIDTH_PRINTING 50
-#define MAX_LEN_overlapping 10 // = MIN_PERIOD * MIN_NUM_FREQ_UNIT
+#define MAX_LEN_overlapping 10  // = MIN_PERIOD * MIN_NUM_FREQ_UNIT
 
 
 // The following values are optimzed for a benchmark dataset.
-#define MIN_WINDOW 5 //10 // 20  // Window size parameters for locating the boundaries of tandem repeats
+#define MIN_WINDOW 5
 #define MAX_WINDOW 10240
 
 #define minKmer 5
@@ -60,6 +58,8 @@ float min_match_ratio;
 #define PrimeMax 256019
 
 //  Global variables in the heap
+int Manhattan_Distance;         // The default setting is 1 in the main.
+float min_match_ratio;
 int *pow4;              // A table of pow(4, k)
 int *min_coverage_for_missing_bases;
 int *orgInputString;    // An input read string of length MAX_INPUT_LENGTH.
@@ -77,9 +77,6 @@ int *directional_index_w;       // The window width w for the local maximum
 int *vector0, *vector1, *vector2;
 double *freq_interval_len;       // For computing frequency distribution of interval lengths
                        // The length is MAX_INPUT_LENGTH
-
-//int *count_period_all;  // Frequency of individual periods of size 1 to MAX_PERIOD.
-//int *rep_unit_string;   // String of representative unit of the focal repeat. The length is MAX_PERIOD.
 int *WrapDP;            // 2D space for Wrap-around global alignment DP for handling tandem repeats
 char *alignment_input;
 char *alignment_symbols;
@@ -113,14 +110,13 @@ typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
 
 repeat_in_read *RRs;
 
-
 // External functions
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define DIFF(x, y) ((x) > (y) ? ((x) - (y)) : ((y) - (x)))
 
-int handle_one_file(char *inputFile, int print_multiple_TR, int print_alignment);
-void handle_one_read( char *readID, int inputLen, int read_cnt, int print_multiple_TR, int print_alignment);
+int handle_one_file(char *inputFile, int print_alignment);
+void handle_one_read( char *readID, int inputLen, int read_cnt, int print_alignment);
 void fill_directional_index_with_end(int DI_array_length, int inputLen, int random_string_length);
 void init_inputString(int k, int query_start, int query_end, int inputLen);
 
@@ -139,7 +135,5 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 int query_counter;
 
 //For debugging with #ifdef
-
 //#define DEBUG_match_gain
 
-//#define DUMP_DI_Manhattan

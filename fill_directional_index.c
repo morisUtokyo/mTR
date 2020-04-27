@@ -539,6 +539,7 @@ void fill_directional_index_with_end(int DI_array_length, int inputLen, int rand
     for(int i=0; i<DI_array_length; i++){
         directional_index[i]   = -1;
         directional_index_end[i] = -1;
+        directional_index_w[i]  = -1;
     }
 
     // Fill directional index
