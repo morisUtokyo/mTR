@@ -177,14 +177,19 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     //
     // Locate overlapping regions of tandem repeats
     //
-    
     int random_string_length;
     
+#ifdef longerRandomString
+    // The following setting works very well. Reduce the computation time by 30-40% for longer inputs while retaining the accuracy.
+    random_string_length = inputLen/10;
+#else
     if(inputLen < MAX_WINDOW * 2){
         random_string_length = inputLen;
     }else{
         random_string_length = MAX_WINDOW * 2;
     }
+#endif
+
     
     int DI_array_length = inputLen + random_string_length*2;
     
