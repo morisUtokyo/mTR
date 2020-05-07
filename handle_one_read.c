@@ -27,7 +27,7 @@
  either expressed or implied, of the FreeBSD Project.
  */
 
-#include <sys/time.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -179,7 +179,7 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     //
     int random_string_length;
     
-#ifdef longerRandomString
+#ifndef longerRandomString
     // The following setting works very well. Reduce the computation time by 30-40% for longer inputs while retaining the accuracy.
     random_string_length = inputLen/10;
 #else
