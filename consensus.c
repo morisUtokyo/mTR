@@ -636,7 +636,7 @@ void polish_repeat(repeat_in_read *rr){
         if(rr->string_score[j] == 1 && suspicious(rr, j) == 1 )
         {
             for(int l = 0; l < 4; l++){
-                int alternativeNode = refNode + (l - int_unit[j]) * pow4[k-1];
+                int alternativeNode = (refNode + (l - int_unit[j]) * pow4[k-1]) % pow4[k];
                 if( alternativeNode < 0 || pow4[k] <= alternativeNode){
                     fprintf(stderr, "fatal error: alternativeNode is out of range.\n");
                     exit(EXIT_FAILURE);

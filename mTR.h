@@ -43,7 +43,7 @@
 #define MAX_WINDOW 10240
 
 #define minKmer 5
-#define maxKmer 11      // Increase this when no qualified repeats are found.
+#define maxKmer 15      // Increase this when no qualified repeats are found.
 #define MAX_tiebreaks 1024
 #define MIN_jaccard_index 0.98
 

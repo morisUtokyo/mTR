@@ -27,7 +27,7 @@
  either expressed or implied, of the FreeBSD Project.
  */
 
-#include <sys/time.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -102,26 +102,22 @@ void find_tandem_repeat_sub(int query_start, int query_end, repeat_in_read *rr )
 void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int inputLen, repeat_in_read *rr ){
     
     // A heuristic rule for setting the k-mer range for a de Bruijn graph to an nearly optimal one
-    int min_k, max_k, inc_size;
+    int min_k, max_k;
     if(w < 100){
         min_k = minKmer - 3;    // 2
-        max_k = maxKmer - 5;    // 10  The accuracy gets worse if this is set to 5.
-        inc_size = 1;
+        max_k = maxKmer - 5;    // 6  The accuracy gets worse if this is set to 5.
     }else if(w < 1000){
         min_k = minKmer - 3;    // 2
-        max_k = maxKmer - 3;    // 12
-	inc_size = 1;
+        max_k = maxKmer - 2;    // 9
     }else{
         min_k = minKmer;        // 5
-        max_k = maxKmer;        // 15
-	inc_size = 1;
+        max_k = maxKmer;        // 11
     }
-
     float max_ratio = -1;
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
     
-    for(int k = min_k; k <= max_k; k = k + inc_size){
+    for(int k = min_k; k <= max_k; k++){
         // To rr, assign readID, inputLen and k-mer
         clear_rr(tmp_rr);
         strcpy( tmp_rr->readID, readID);
@@ -131,8 +127,7 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
         find_tandem_repeat_sub(query_start, query_end, tmp_rr);
         
         float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-        
-	if(max_ratio < tmp_ratio &&
+        if(max_ratio < tmp_ratio &&
            min_match_ratio <= tmp_ratio &&
            MIN_NUM_FREQ_UNIT < tmp_rr->Num_freq_unit &&
            MIN_PERIOD <= tmp_rr->rep_period )
@@ -183,13 +178,17 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     // Locate overlapping regions of tandem repeats
     //
     int random_string_length;
-    int MIN_random_string_length= 100;    
-
-    if(inputLen < MIN_random_string_length * 10){
-        random_string_length = MIN_random_string_length;
+    
+#ifndef longerRandomString
+    // The following setting works very well. Reduce the computation time by 30-40% for longer inputs while retaining the accuracy.
+    random_string_length = inputLen/10;
+#else
+    if(inputLen < MAX_WINDOW * 2){
+        random_string_length = inputLen;
     }else{
-        random_string_length = inputLen/10;
+        random_string_length = MAX_WINDOW * 2;
     }
+#endif
 
     
     int DI_array_length = inputLen + random_string_length*2;
@@ -251,3 +250,5 @@ void handle_one_read(char *readID, int inputLen, int read_cnt, int print_alignme
 {
     handle_one_TR(readID, inputLen, print_alignment);
 }
+
+

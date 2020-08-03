@@ -28,7 +28,7 @@
  */
 #include "chaining.h"
 #include "mTR.h"
-#include <stdio.h>
+//#include <stdio.h>
 #include <iostream>
 #include <set>
 #include <map>
@@ -42,8 +42,8 @@ using namespace std;
 
 class Alignment{
 public:
-	int start_x, start_y, end_x, end_y;
-	int initial_score, score;
+    int start_x, start_y, end_x, end_y;
+    int initial_score, score;
     Alignment* predecessor;
 
     char*   readID;
@@ -89,13 +89,13 @@ public:
         string      = new char[BLK];
         string_score= new int[MAX_PERIOD];
         
-		start_x     = a_rep_start;
-		start_y	    = a_rep_start;
-		end_x	    = a_rep_end;
-		end_y	    = a_rep_end;
-		initial_score   = a_Num_matches;
-		score	        = a_Num_matches;
-		predecessor	= NULL;
+        start_x     = a_rep_start;
+        start_y        = a_rep_start;
+        end_x        = a_rep_end;
+        end_y        = a_rep_end;
+        initial_score   = a_Num_matches;
+        score            = a_Num_matches;
+        predecessor    = NULL;
     
         strcpy( readID, a_readID );
         inputLen    = a_inputLen;
@@ -116,7 +116,7 @@ public:
         for(int i=0; i<rep_period; i++){
             string_score[i] = a_string_score[i]; }
         
-	}
+    }
     
     ~Alignment(){
         delete [] readID;
@@ -176,27 +176,27 @@ public:
         }
         print_one_TR(print_alignment);
     }
-	void print_one_alignment()const{
-		cout << "(" <<	start_x << "," << start_y << ")\t-> (" << end_x << ","  << end_y <<
+    void print_one_alignment()const{
+        cout << "(" <<    start_x << "," << start_y << ")\t-> (" << end_x << ","  << end_y <<
                         ")\t units = " << rep_period << " x " << Num_freq_unit <<
                         "\tscores = " << initial_score << "\t" << score << endl;
-	}
+    }
     void print_chain()const{
         if(predecessor != NULL){
             predecessor->print_chain();
         }
         print_one_alignment();
     }
-	bool isStart(int x_coord)const{
-		if(x_coord == start_x)
-			return true;
-		else
-			return false;
-	}
-	void set_predecessor(Alignment* a){
-		predecessor = a;
-		score += a->score;
-	}
+    bool isStart(int x_coord)const{
+        if(x_coord == start_x)
+            return true;
+        else
+            return false;
+    }
+    void set_predecessor(Alignment* a){
+        predecessor = a;
+        score += a->score;
+    }
 };
 
 set<Alignment*> set_of_alignments;
@@ -355,4 +355,3 @@ void chaining(int print_alignment){
         sorted_by_Y.erase(iter);
     }
 }
-

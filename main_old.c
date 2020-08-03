@@ -35,7 +35,6 @@
 #include <string.h>
 #include <unistd.h>
 #include "mTR.h"
-#include <getopt.h>
 
 void print_error_message(){
     fprintf(stderr, "mTR [-acp] [-m ratio] <fasta file name> \n");
@@ -107,7 +106,6 @@ int main(int argc, char *argv[])
     
     if(print_computation_time){
         fprintf(stderr, "Computation time\n");
-
         fprintf(stderr, "%f\tall\n",           time_all);
         fprintf(stderr, "%f\tallocating memory\n", time_memory);
         fprintf(stderr, "%f\tranges\n",         time_range);
