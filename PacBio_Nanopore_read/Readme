@@ -1,9 +1,10 @@
 Synthetic long reads generated using Badread for simulating PacBio and Nanopore reads (Wick, 2019)
 
-<File name> = <unit length>_<frequency>_pacbio|nanopore.fasta
+<Fasta file name> = <unit length>_<frequency>_pacbio|nanopore.fasta
 
 <unit length> = 2, 5, 10, 20, 50, 100, or 200.
 <frequency>   = 10, 20, 50, 100, or 200.
 
-For example, file name "100_200_pacbio.fasta" 
-has 1000 PacBio reads each read of which has 200 occurrences of a 100bp unit.
+For example, fasta file name "100_200_pacbio.fasta" has 1000 PacBio reads each read of which has 200 occurrences of a 100bp unit.
+
+To obtain these fasta files, you need to unzip all zip files.
