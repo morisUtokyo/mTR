@@ -7,7 +7,8 @@ Synthetic long reads generated using Badread for simulating PacBio and Nanopore 
 
 For example, fasta file name "100_200_pacbio.fasta" has 1000 PacBio reads each read of which has 200 occurrences of a 100bp unit.
 
-Because the size of each file needs to be smaller than 25MB, we divided 200_200_pacbio.fasta into 200_200_pacbio_1.fasta and 200_200_pacbio_2.fasta, each of which contains 500 PacBio reads with 200 occurrences of a 200bp unit.
-Similarly, we divided 200_200_nanopore.fasta into two
+Because the size of each file needs to be smaller than 25MB, we divided 200_200_pacbio.fasta into 
+200_200_pacbio_1.fasta and 200_200_pacbio_2.fasta, each of which contains 500 PacBio reads with 200 occurrences of a 200bp unit.
+Similarly, we divided 200_200_nanopore.fasta into two.
 
 To obtain these fasta files, you need to unzip all zip files.
