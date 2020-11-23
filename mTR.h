@@ -133,5 +133,6 @@ float time_all, time_memory, time_range, time_period, time_initialize_input_stri
 int query_counter;
 
 //For debugging with #ifdef
+//#define DEBUG
 //#define DEBUG_match_gain
 

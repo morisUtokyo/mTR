@@ -368,16 +368,19 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     clear_rr(tmp_rr);
     clear_rr(max_rr);
     float max_ratio = -1;
+    float tmp_ratio;
     
     // try MAIN_GAIN = 5, MISMATCH_PENALTY = 1, INDEL_PENALTY = 1
+    /*
     set_rr( tmp_rr, rr );
     wrap_around_DP_sub( query_start, query_end, tmp_rr, 5, 1, 1 );
     
-    float tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
     if( max_ratio < tmp_ratio ){
         set_rr( max_rr, tmp_rr );
         max_ratio = tmp_ratio;
     }
+     */
     
     // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
     set_rr( tmp_rr, rr );
@@ -388,6 +391,17 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
         set_rr( max_rr, tmp_rr );
         max_ratio = tmp_ratio;
     }
+    
+    // try MAIN_GAIN = 1, MISMATCH_PENALTY = 3, INDEL_PENALTY = 1
+    set_rr( tmp_rr, rr );
+    wrap_around_DP_sub( query_start, query_end, tmp_rr, 1, 3, 1);
+    
+    tmp_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+    if(max_ratio < tmp_ratio){
+        set_rr( max_rr, tmp_rr );
+        max_ratio = tmp_ratio;
+    }
+    
     
     set_rr(rr, max_rr);
     

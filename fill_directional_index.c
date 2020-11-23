@@ -126,20 +126,33 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
     return(DI);
 }
 
+//#define USE_MT_RANDOM_NUMBER
+#ifdef USE_MT_RANDOM_NUMBER
+    #define random_base() ((int)(genrand_int32()%4))
+#else
+    // Use the same series of random numbers for all input sequences
+    #define random_base() ((int)(rand()%4))
+#endif
+
 void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_string_length){
-    init_genrand(0);
     
-    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){ inputString_w_rand[i] = (int)(genrand_int32()%4);
+#ifdef USE_MT_RANDOM_NUMBER
+    init_genrand(0);
+#endif
+    
+    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){
+        
+        inputString_w_rand[i] = random_base();
     }
     
     for(int i = 0; i < random_string_length; i++){
-        inputString_w_rand[i] = (int)(genrand_int32()%4);
+        inputString_w_rand[i] = random_base();
     }
     for(int i = 0; i < inputLen; i++){
         inputString_w_rand[i + random_string_length] = orgInputString[i];
     }
     for(int i = 0; i < random_string_length; i++){
-        inputString_w_rand[i + random_string_length + inputLen] = (int)(genrand_int32()%4);
+        inputString_w_rand[i + random_string_length + inputLen] = random_base();
     }
     int tmp = 0;
     for(int i=0; i<(k-1); i++){
