@@ -335,10 +335,13 @@ int search_De_Bruijn_graph_forward( int query_start, int query_end, int initialN
         Node = 4 * (Node % pow4[k-1]) + (max_lsd / pow4[m-1] ); // Shift by one base
         if(Node == endNode){
             actual_rep_period = l+1;
+            if(MAX_PERIOD <= actual_rep_period)
+                actual_rep_period = 0;
             break;
         }
     }
     rr->rep_period           = actual_rep_period;
+
     
     int foundLoop;
     if(actual_rep_period == 0){
@@ -429,6 +432,8 @@ int search_De_Bruijn_graph_backward( int query_start, int query_end, int initial
         
         if(Node == endNode){
             actual_rep_period = l+1;
+            if(MAX_PERIOD <= actual_rep_period)
+                actual_rep_period = 0;
             break;
         }
     }
@@ -490,7 +495,10 @@ int search_De_Bruijn_graph_backward( int query_start, int query_end, int initial
         }
         freq_2mer_array(rep_unit_string, tmp_rep_unit_len, rr->freq_2mer);
     }
-        
+    if(MAX_PERIOD <= tmp_rep_unit_len){
+        tmp_rep_unit_len = 0;
+        foundLoop = 0;
+    }
     rr->rep_period  = tmp_rep_unit_len; //actual_rep_period;
     
     return(foundLoop);
@@ -532,12 +540,16 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
                 // forward
                     set_rr(tmp_rr, rr);
                     foundLoop = search_De_Bruijn_graph_forward( query_start, query_end, maxNode, maxNode, tmp_rr);
+                    if(MAX_PERIOD <= tmp_rr->rep_period)
+                        foundLoop = 0;
                 }else{
                 // backward
                     int subgoalNode;
                     char subgoalString[MAX_PERIOD];
                     set_rr(tmp_rr, rr);
                     foundLoop = search_De_Bruijn_graph_backward( query_start, query_end, maxNode, maxNode, tmp_rr, &subgoalNode, subgoalString);
+                    if(MAX_PERIOD <= tmp_rr->rep_period)
+                        foundLoop = 0;
                 }
                 // Each of forward and backward searches determine
                 // rep_period, string, and string_score
@@ -551,7 +563,8 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
                     if(max_ratio < tmp_ratio &&
                        min_match_ratio <= tmp_ratio &&
                        MIN_NUM_FREQ_UNIT < tmp_rr->Num_freq_unit &&
-                       MIN_PERIOD <= tmp_rr->rep_period )
+                       MIN_PERIOD <= tmp_rr->rep_period &&
+                       tmp_rr->rep_period < MAX_PERIOD)
                     {
                         max_ratio = tmp_ratio;
                         set_rr(max_rr, tmp_rr);
@@ -1049,20 +1062,27 @@ void revise_representative_unit( repeat_in_read *rr ){
     MATCH_GAIN = 5; MISMATCH_PENALTY = 1; INDEL_PENALTY = 1;
     
     revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
-    wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
-    float tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-    if(rr_ratio < tmp_rr_ratio)
-        set_rr( rr, tmp_rr );
+    // The above procedure may increase the unit length and make sure that the length is less than MAX_PERIOD.
+    float tmp_rr_ratio;
+    if(tmp_rr->rep_period < MAX_PERIOD){
+        wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY );
+        tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+        if(rr_ratio < tmp_rr_ratio)
+            set_rr( rr, tmp_rr );
+    }
     
     // try MAIN_GAIN = 1, MISMATCH_PENALTY = 1, INDEL_PENALTY = 3
     set_rr( tmp_rr, rr );
     MATCH_GAIN = 1; MISMATCH_PENALTY = 1; INDEL_PENALTY = 3;
     
     revise_representative_unit_sub( tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
-    wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
-    tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
-    if(rr_ratio < tmp_rr_ratio)
-        set_rr( rr, tmp_rr );
+    // The above procedure may increase the unit length and make sure that the length is less than MAX_PERIOD.
+    if(tmp_rr->rep_period < MAX_PERIOD){
+        wrap_around_DP_sub( tmp_rr->rep_start, tmp_rr->rep_end, tmp_rr, MATCH_GAIN, MISMATCH_PENALTY, INDEL_PENALTY);
+        tmp_rr_ratio = (float)tmp_rr->Num_matches / (tmp_rr->Num_matches + tmp_rr->Num_mismatches + tmp_rr->Num_insertions + tmp_rr->Num_deletions);
+        if(rr_ratio < tmp_rr_ratio)
+            set_rr( rr, tmp_rr );
+    }
 
     free(tmp_rr);
 }

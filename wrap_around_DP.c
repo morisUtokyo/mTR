@@ -364,7 +364,15 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     
     repeat_in_read *tmp_rr, *max_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    if(tmp_rr == NULL){
+        fprintf(stderr, "cannot allocate space for tmp_rr.\n");
+        exit(EXIT_FAILURE);
+    }
     max_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    if(max_rr == NULL){
+        fprintf(stderr, "cannot allocate space for max_rr.\n");
+        exit(EXIT_FAILURE);
+    }
     clear_rr(tmp_rr);
     clear_rr(max_rr);
     float max_ratio = -1;
@@ -405,6 +413,17 @@ void wrap_around_DP( int query_start, int query_end, repeat_in_read *rr){
     
     set_rr(rr, max_rr);
     
-    free(tmp_rr);
-    free(max_rr);
+    if(tmp_rr == NULL){
+        fprintf(stderr, "cannot free tmp_rr.\n");
+        exit(EXIT_FAILURE);
+    }else{
+        free(tmp_rr);
+    }
+
+    if(tmp_rr == NULL){
+        fprintf(stderr, "cannot free max_rr.\n");
+        exit(EXIT_FAILURE);
+    }else{
+        free(max_rr);
+    }
 }

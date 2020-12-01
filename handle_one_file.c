@@ -151,6 +151,10 @@ void malloc_global_variables(){
         gaps[i] = malloc(sizeof(int) * 4);
         if( gaps[i] == NULL ){ free_global_variables_and_exit(); }
     }
+#ifdef DEBUG
+    fprintf(stderr, "Succeeded in malooc (handle_one_file.c)\n");
+#endif
+    
 }
 
 void free_global_variables(){
@@ -178,7 +182,9 @@ void free_global_variables(){
     for(int i=0; i<(MAX_PERIOD + 1); i++){ free(gaps[i]); }
     free(consensus);
     free(gaps);
-    
+#ifdef DEBUG
+    fprintf(stderr, "Succeeded in free (handle_one_file.c)\n");
+#endif
 }
 
 int handle_one_file(char *inputFile, int print_alignment){

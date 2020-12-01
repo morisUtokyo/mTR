@@ -114,12 +114,16 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     }else{
         min_k = minKmer;        // 5
         max_k = maxKmer;        // 15
-	inc_size = 1;
+        inc_size = 1;
     }
 
     float max_ratio = -1;
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    if(tmp_rr == NULL){
+        fprintf(stderr, "cannot allocate space for tmp_rr.\n");
+        exit(EXIT_FAILURE);
+    }
     
     for(int k = min_k; k <= max_k; k = k + inc_size){
         // To rr, assign readID, inputLen and k-mer
@@ -141,7 +145,12 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
             set_rr(rr, tmp_rr);
         }
     }
-    free(tmp_rr);
+    if(tmp_rr == NULL){
+        fprintf(stderr, "cannot free tmp_rr.\n");
+        exit(EXIT_FAILURE);
+    }else{
+        free(tmp_rr);
+    }
 }
 
 void insert_an_alignment(repeat_in_read rr){
@@ -210,6 +219,10 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     
     repeat_in_read *tmp_rr;
     tmp_rr = (repeat_in_read*) malloc(sizeof(repeat_in_read));
+    if(tmp_rr == NULL){
+        fprintf(stderr, "cannot allocate space for tmp_rr.\n");
+        exit(EXIT_FAILURE);
+    }
     
     for(int query_start=0; query_start < inputLen; query_start++){
         int query_end = directional_index_end[query_start];
