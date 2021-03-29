@@ -227,13 +227,15 @@ int handle_one_file(char *inputFile, int print_alignment){
                 read_cnt++;
             }
             // Feed the header of the read.
-            for(i=1; s[i]!='\0' && s[i]!='\n' && i<BLK; i++){
+            for(i=1; s[i]!='\0' && s[i]!='\n' && s[i]!='\r' && i<BLK; i++){
+            //for(i=1; s[i]!='\0' && s[i]!='\n' && i<BLK; i++){
                 readID[i-1] = s[i];
             }
             readID[i-1] = '\0';
             cnt = 0;
         }else{
-            for(i=0; s[i]!='\0' && s[i]!='\n'; i++){
+            for(i=0; s[i]!='\0' && s[i]!='\n' && s[i]!='\r'; i++){
+            //for(i=0; s[i]!='\0' && s[i]!='\n'; i++){
                 switch(s[i]){
                     case 'A':
                     case 'a':
