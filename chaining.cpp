@@ -64,8 +64,6 @@ public:
     int     indel_penalty;
     char    *string;
     int     *string_score;
-    //char    string[MAX_PERIOD];
-    //int     string_score[MAX_PERIOD];
 
     Alignment(char* a_readID,
               int   a_inputLen,
@@ -341,11 +339,13 @@ void chaining(int print_alignment){
 #endif
     (sorted_by_Y.rbegin())->second->print_all_TRs(print_alignment);
 
+    
     // delete all
-    for(set<Alignment*>::iterator iter = set_of_alignments.begin();
-        iter != set_of_alignments.end(); iter++){
-        set_of_alignments.erase(iter);
-    }
+    /*
+    set_of_alignments.clear();
+    sorted_by_X.clear();
+    sorted_by_Y.clear();
+    */
     for(multimap<int, Alignment*>::iterator iter = sorted_by_X.begin();
         iter != sorted_by_X.end(); iter++){
         sorted_by_X.erase(iter);
@@ -353,6 +353,13 @@ void chaining(int print_alignment){
     for(multimap<int, Alignment*>::iterator iter = sorted_by_Y.begin();
         iter != sorted_by_Y.end(); iter++){
         sorted_by_Y.erase(iter);
+    }
+    for(set<Alignment*>::iterator iter = set_of_alignments.begin();
+        iter != set_of_alignments.end(); iter++){
+        // delete all elements of Alignment
+        Alignment *tmp = (*iter);
+        delete tmp;
+        set_of_alignments.erase(iter);
     }
 }
 

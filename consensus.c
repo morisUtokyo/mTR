@@ -576,8 +576,8 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
         }
     }
     set_rr(rr, max_rr);
-    free(tmp_rr);
-    free(max_rr);
+    if(tmp_rr != NULL)  free(tmp_rr);
+    if(max_rr != NULL)  free(max_rr);
     return(foundLoop);
 }
 
@@ -1083,8 +1083,7 @@ void revise_representative_unit( repeat_in_read *rr ){
         if(rr_ratio < tmp_rr_ratio)
             set_rr( rr, tmp_rr );
     }
-
-    free(tmp_rr);
+    if(tmp_rr != NULL)  free(tmp_rr);
 }
 
 void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k){

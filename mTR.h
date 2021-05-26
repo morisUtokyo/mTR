@@ -85,6 +85,16 @@ char *alignment_repeats;
                         // The largest array, and the size is (MAX_PERIOD+1) * (MAX_INPUT_LENGTH+1)
 int **consensus, **gaps;  // Space for consensus
 
+#define MAX_ID_LENGTH       1000
+typedef struct{
+    int len;
+    int codedString[MAX_INPUT_LENGTH];
+    char ID[MAX_ID_LENGTH];
+} Read;
+
+int tmp_read_cnt;
+char *nextReadID; // [MAX_ID_LENGTH];
+
 
 typedef struct {        // MAX_ID_LENGTH + MAX_EPRIOD + 28*4 = 612 bytes
     int     ID;  // 0,1,2,...
@@ -131,6 +141,38 @@ void print_freq(int rep_start, int rep_end, int rep_period, char* string, int in
 
 float time_all, time_memory, time_range, time_period, time_initialize_input_string, time_wrap_around_DP, time_count_table, time_chaining;
 int query_counter;
+
+// Interface between C and C++ functions
+#ifndef __CSUB_H__
+#define __CSUB_H__ 1
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+    void insert_an_alignment_into_set(
+                          char* readID,
+                          int   inputLen,
+                          int   rep_start,
+                          int   rep_end,
+                          int   repeat_len,
+                          int   rep_period,
+                          int   Num_freq_unit,
+                          int   Num_matches,
+                          int   Num_mismatches,
+                          int   Num_insertions,
+                          int   Num_deletions,
+                          int   Kmer,
+                          int   match_gain,
+                          int   mismatch_penalty,
+                          int   indel_penalty,
+                          char* string,
+                          int*  string_score);
+    void chaining(int print_alignment);
+    extern void pretty_print_alignment(char *unit_string, int unit_len, int rep_start, int rep_end, int match_gain, int mismatch_penalty, int indel_penalty);
+    extern void print_freq(int rep_start, int rep_end, int rep_period, char* string, int inputLen, int k);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* __CSUB_H__ */
 
 //For debugging with #ifdef
 //#define DEBUG
