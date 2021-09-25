@@ -212,7 +212,7 @@ void return_one_read(FILE *fp, Read *currentRead){
             if(tmp_read_cnt == -1){ // This is the first read
                 tmp_read_cnt = 0;
                 // Feed the ID of the current read into the ID of nextRead
-                for(i=1; s[i]!='\0' && s[i]!='\n' && i<BLK; i++)
+                for(i=1; s[i]!='\0' && s[i]!='\n' && s[i]!='\r' && i<BLK; i++)
                     nextReadID[i-1] = s[i];
                 nextReadID[i-1] = '\0';
                 // Move on to feed the current string
@@ -224,7 +224,7 @@ void return_one_read(FILE *fp, Read *currentRead){
                 currentRead->ID[j] = '\0';
                 
                 // Feed the ID of the current read into the ID of nextRead
-                for(i=1; s[i]!='\0' && s[i]!='\n' && i<BLK; i++)
+                for(i=1; s[i]!='\0' && s[i]!='\n' && s[i]!='\r' && i<BLK; i++)
                     nextReadID[i-1] = s[i];
                 nextReadID[i-1] = '\0';
                 
