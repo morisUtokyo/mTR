@@ -34,6 +34,7 @@
 #include <string.h>
 #include "mTR.h"
 #include "chaining.h"
+#include "timing.h"
 
 void print_4_decimals(int val, int len){
     if(len > 0){
@@ -191,6 +192,9 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     //
     // Locate overlapping regions of tandem repeats
     //
+    // Para medir tiempos
+    resnfo start, end;
+    timenfo time;
     int random_string_length;
     int MIN_random_string_length= 100;    
 
@@ -223,7 +227,8 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
         fprintf(stderr, "cannot allocate space for tmp_rr.\n");
         exit(EXIT_FAILURE);
     }
-    
+    double summ = 0.0;
+    int iterations = 0;
     for(int query_start=0; query_start < inputLen; query_start++){
         int query_end = directional_index_end[query_start];
         if(-1 < query_end && query_end < inputLen)
@@ -231,9 +236,7 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
             // Move onto de Bruijn graph construction
             int width     = directional_index_w[query_start];
             clear_rr(tmp_rr);
-            
             find_tandem_repeat( query_start, query_end, width, readID, inputLen, tmp_rr );
-            
             query_counter++;
             // Examine if a qualified TR is found
             if( tmp_rr->repeat_len > 0 &&
@@ -242,6 +245,7 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
                 insert_an_alignment(*tmp_rr);
                 remove_redundant_ranges_from_directional_index(tmp_rr->rep_start, tmp_rr->rep_end);
             }
+            iterations++;
         }
     }
     free(tmp_rr);

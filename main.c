@@ -37,6 +37,8 @@
 #include "mTR.h"
 #include <getopt.h>
 
+#include <mpi.h>
+
 void print_error_message(){
     fprintf(stderr, "mTR [-acp] [-m ratio] <fasta file name> \n");
     fprintf(stderr, "-a: Output the alignment between the input sequence and predicted tandem repeat. \n");
@@ -48,6 +50,13 @@ void print_error_message(){
 int main(int argc, char *argv[])
 {
     char *inputFile;
+
+    // MPI variables
+    int myid, num_procs;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
     // default parameters
     int print_computation_time = 0;
@@ -119,5 +128,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "\t%f\tchaining\n",   time_chaining);
         fprintf(stderr, "\t%i\tCount of queries\n", query_counter);
     }
+	MPI_Finalize();
     return EXIT_SUCCESS;
 }
