@@ -126,7 +126,7 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
     return(DI);
 }
 
-//#define USE_MT_RANDOM_NUMBER
+#define USE_MT_RANDOM_NUMBER
 #ifdef USE_MT_RANDOM_NUMBER
     #define random_base() ((int)(genrand_int32()%4))
 #else
