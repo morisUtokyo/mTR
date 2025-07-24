@@ -295,7 +295,7 @@ void chaining(int print_alignment){
 #endif
             }else{
                 bool flag = true;   // flag for indicating that tmpX_alignment should be inserted
-                for(tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++)
+                for(auto tmpY = sorted_by_Y.begin(); tmpY != sorted_by_Y.end(); tmpY++)
                 {
                     if(tmpY->second->end_y <= tmpX_alignment->end_y &&
                        tmpY->second->score > tmpX_alignment->score)
@@ -313,7 +313,7 @@ void chaining(int print_alignment){
                     tmpX_alignment->print_one_TR(print_alignment);
 #endif
                     // Delete unnecessary alignments
-                    for(tmpY = sorted_by_Y.begin();
+                    for(auto tmpY = sorted_by_Y.begin();
                         tmpY != sorted_by_Y.end();
                         tmpY++)
                     {
@@ -323,7 +323,7 @@ void chaining(int print_alignment){
 #ifdef DEBUG_chaining
                             cout << "delete\t"; tmpY->second->print_one_TR(print_alignment);
 #endif
-                            sorted_by_Y.erase(tmpY);
+                            tmpY = sorted_by_Y.erase(tmpY);
                         }
                     }
                 }
