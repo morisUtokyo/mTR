@@ -346,19 +346,18 @@ void chaining(int print_alignment){
     
     // delete all
     for(multimap<int, Alignment*>::iterator iter = sorted_by_X.begin(); 
-        iter != sorted_by_X.end(); )//{ sorted_by_X.erase(iter); } //
+        iter != sorted_by_X.end(); )
         { iter = sorted_by_X.erase(iter); }
     
     for(multimap<int, Alignment*>::iterator iter = sorted_by_Y.begin(); 
-        iter != sorted_by_Y.end(); )//{ sorted_by_X.erase(iter); }
-        { iter = sorted_by_X.erase(iter); }
+        iter != sorted_by_Y.end(); )
+        { iter = sorted_by_Y.erase(iter); }
 
     for(set<Alignment*>::iterator iter = set_of_alignments.begin();
         iter != set_of_alignments.end(); ){
         // delete all elements of Alignment
         Alignment *tmp = (*iter);
         delete tmp;
-        //set_of_alignments.erase(iter);
         iter = set_of_alignments.erase(iter);
     }
 }
