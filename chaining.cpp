@@ -34,7 +34,7 @@
 #include <map>
 #include <string.h>
 using namespace std;
-//#define DEBUG_chaining
+
 
 #define MH_distance_threshold 0.3  // Two 2mer frequency distributions are identical if their Manhattan distance is less than or equal to this threshold.  A small threshold generates smaller groups of repeat units.
 #define MIN_REP_LEN_CONCATENATE 100
@@ -125,7 +125,8 @@ public:
     void print_one_TR(int print_alignment)const{
         
         printf(
-           "%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
+           "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
+           //"%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
            readID,
            inputLen,
            rep_start+1, // 1-origin
@@ -338,28 +339,27 @@ void chaining(int print_alignment){
     (sorted_by_Y.rbegin())->second->print_chain();
 #endif
     (sorted_by_Y.rbegin())->second->print_all_TRs(print_alignment);
-
+    
+#ifdef DEBUG_Aug2022
+    fprintf(stderr, "Printed the chain.\n");
+#endif
     
     // delete all
-    /*
-    set_of_alignments.clear();
-    sorted_by_X.clear();
-    sorted_by_Y.clear();
-    */
-    for(multimap<int, Alignment*>::iterator iter = sorted_by_X.begin();
-        iter != sorted_by_X.end(); iter++){
-        sorted_by_X.erase(iter);
-    }
-    for(multimap<int, Alignment*>::iterator iter = sorted_by_Y.begin();
-        iter != sorted_by_Y.end(); iter++){
-        sorted_by_Y.erase(iter);
-    }
+    for(multimap<int, Alignment*>::iterator iter = sorted_by_X.begin(); 
+        iter != sorted_by_X.end(); )//{ sorted_by_X.erase(iter); } //
+        { iter = sorted_by_X.erase(iter); }
+    
+    for(multimap<int, Alignment*>::iterator iter = sorted_by_Y.begin(); 
+        iter != sorted_by_Y.end(); )//{ sorted_by_X.erase(iter); }
+        { iter = sorted_by_X.erase(iter); }
+
     for(set<Alignment*>::iterator iter = set_of_alignments.begin();
-        iter != set_of_alignments.end(); iter++){
+        iter != set_of_alignments.end(); ){
         // delete all elements of Alignment
         Alignment *tmp = (*iter);
         delete tmp;
-        set_of_alignments.erase(iter);
+        //set_of_alignments.erase(iter);
+        iter = set_of_alignments.erase(iter);
     }
 }
 
