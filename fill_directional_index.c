@@ -142,7 +142,7 @@ void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_s
     
     for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){
         
-        inputString_w_rand[i] = random_base();
+        inputString_w_rand[i] = 0; // initialize the array  random_base(); 
     }
     
     for(int i = 0; i < random_string_length; i++){
