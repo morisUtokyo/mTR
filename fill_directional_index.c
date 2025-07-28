@@ -135,15 +135,15 @@ double DI_index(int *vector0, int *vector1, int *vector2, int k){
 #endif
 
 void init_inputString_surrounded_by_random_seq(int k, int inputLen, int random_string_length){
-    
+        
+    for(int i=0; i<MAX_INPUT_LENGTH; i++){
+    //for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){
+        inputString_w_rand[i] = 0; // initialize the array  random_base();
+    }
+
 #ifdef USE_MT_RANDOM_NUMBER
     init_genrand(0);
 #endif
-    
-    for(int i=0; i<inputLen + random_string_length*4 && i<MAX_INPUT_LENGTH; i++){
-        
-        inputString_w_rand[i] = 0; // initialize the array  random_base(); 
-    }
     
     for(int i = 0; i < random_string_length; i++){
         inputString_w_rand[i] = random_base();
