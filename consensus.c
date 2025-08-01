@@ -68,7 +68,7 @@ int nearPrime(int width){
     
 }
 
-int generate_freqNode_return_maxNode(int query_start, int query_end, int k, int width){
+int generate_freqNode_return_maxNode(int query_start, int query_end, int inputLen, int k, int width){
     
     struct timeval s, e;
     gettimeofday(&s, NULL);
@@ -79,9 +79,9 @@ int generate_freqNode_return_maxNode(int query_start, int query_end, int k, int 
     
     if(k <= count_maxKmer){     // 4^k
         memset(count, 0, pow4[k]*4);    //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
-        for(int i = query_start; i <= query_end; i++){ count[ inputString[i] ]++; }
+        for(int i = query_start; i <= query_end && i < inputLen; i++){ count[ inputString[i] ]++; }
         int max_count = -1;
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             if( max_count < count[ inputString[i] ] ){
                 max_count = count[ inputString[i] ];
                 maxNode = inputString[i];
@@ -95,7 +95,7 @@ int generate_freqNode_return_maxNode(int query_start, int query_end, int k, int 
 
         int maxFreq = -1;
         int Node;
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             Node = inputString[i];
             int h =  Node % Prime;     // a hash value of the node
             for(int j=0; ; j++){
@@ -129,7 +129,7 @@ int generate_freqNode_return_maxNode(int query_start, int query_end, int k, int 
     return(maxNode);
 }
 
-int generate_freqNode_return_list_maxNodes(int query_start, int query_end, int k, int width, int *list_maxNodes, int *answer_maxFreq, int max_num_maxNodes){
+int generate_freqNode_return_list_maxNodes(int query_start, int query_end, int inputLen, int k, int width, int *list_maxNodes, int *answer_maxFreq, int max_num_maxNodes){
     
     struct timeval s, e;
     gettimeofday(&s, NULL);
@@ -143,18 +143,18 @@ int generate_freqNode_return_list_maxNodes(int query_start, int query_end, int k
         // memset(count, 0, pow4[k]*4);
         for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
         // Determine the maximum frequency, max_count
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             count[ inputString[i] ]++;
         }
         maxFreq = -1;
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             if( maxFreq < count[ inputString[i] ] ){
                 maxFreq = count[ inputString[i] ];
             }
         }
         // List all nodes with the maximum frequency
         num_maxNodes = 0;
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             if( maxFreq == count[ inputString[i] ] ){
                 list_maxNodes[num_maxNodes++] = inputString[i];
                 count[ inputString[i] ]--;
@@ -171,7 +171,7 @@ int generate_freqNode_return_list_maxNodes(int query_start, int query_end, int k
         // Determine the maximum frequency, maxFreq
         maxFreq = -1;
         int Node;
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             Node = inputString[i];
             int h =  Node % Prime;     // a hash value of the node
             for(int j=0; ; j++){
@@ -198,7 +198,7 @@ int generate_freqNode_return_list_maxNodes(int query_start, int query_end, int k
         }
         // List all nodes with the maximum frequency
         num_maxNodes = 0;
-        for(int i = query_start; i <= query_end; i++){
+        for(int i = query_start; i <= query_end && i < inputLen; i++){
             Node = inputString[i];
             int h =  Node % Prime;     // a hash value of the node
             for(int j=0; ; j++){
@@ -517,7 +517,7 @@ int search_De_Bruijn_graph( int query_start, int query_end, repeat_in_read *rr){
     
     int maxNode, maxFreq;
     int list_maxNodes[100];
-    int num_maxNodes = generate_freqNode_return_list_maxNodes(query_start, query_end, k, width, list_maxNodes, &maxFreq, 100);
+    int num_maxNodes = generate_freqNode_return_list_maxNodes(query_start, query_end, inputLen, k, width, list_maxNodes, &maxFreq, 100);
     
     float max_ratio = -1;
     //int max_matches = -1;
@@ -617,7 +617,7 @@ void polish_repeat(repeat_in_read *rr){
     }
     init_inputString(k, rr->rep_start, rr->rep_end, inputLen);
     int width = rr->rep_end - rr->rep_start + 1;
-    int maxNode = generate_freqNode_return_maxNode(rr->rep_start, rr->rep_end, k, width);
+    int maxNode = generate_freqNode_return_maxNode(rr->rep_start, rr->rep_end, inputLen, k, width);
 
     // Convert a char array into an int array
     int int_unit[MAX_PERIOD];
@@ -1090,7 +1090,7 @@ void print_freq(int rep_start, int rep_end, int rep_period, char* string, int in
     
     init_inputString(k, rep_start, rep_end, inputLen);
     int width = rep_end - rep_start + 1;
-    int maxNode = generate_freqNode_return_maxNode(rep_start, rep_end, k, width);
+    int maxNode = generate_freqNode_return_maxNode(rep_start, rep_end, inputLen, k, width);
     /*
     memset(count, 0, pow4[k]*4); //for(int i = 0; i < pow4[k]; i++){ count[i] = 0;}
     for(int i = rep_start; i <= rep_end; i++){
