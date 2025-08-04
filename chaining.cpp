@@ -124,6 +124,23 @@ public:
     
     void print_one_TR(int print_alignment)const{
         
+        // Find the minimum string among all rotations of s
+        char *s = string;
+        int len = strlen(s);
+        char *tmp_s = (char*)malloc(sizeof(char)*(len+1));
+        char *min_s = (char*)malloc(sizeof(char)*(len+1));
+        for (int i=0; i<len; i++){ min_s[i] = s[i];}  min_s[len] = '\0';
+
+        for( int shift=1; shift<len; shift++ ){
+            // Set the shifted string into the temporary string
+            for (int i=0; i<len; i++){ tmp_s[i] = s[(i+shift)%len];} tmp_s[len] = '\0';
+            // If the temporary string is locally minimum
+            if(strcmp(tmp_s, min_s)<0){
+                for (int i=0; i<len; i++){ min_s[i] = tmp_s[i];} min_s[len] = '\0';
+            }
+        }
+        free(tmp_s);
+        
         printf(
            "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
            //"%.50s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%d\t%s\n",
@@ -139,8 +156,9 @@ public:
            Num_mismatches,
            Num_insertions,
            Num_deletions,
-           string
+           min_s //string
         );
+        free(min_s);
         
 #ifdef DEBUG_unit_score
     printf("\n\t%s", string);
