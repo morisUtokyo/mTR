@@ -192,16 +192,15 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     // Locate overlapping regions of tandem repeats
     //
     int random_string_length;
-    int MIN_random_string_length= 100;    
+    int MIN_random_string_length = 1000;    // = 100
 
     if(inputLen < MIN_random_string_length * 10){
         random_string_length = MIN_random_string_length;
     }else{
         random_string_length = inputLen/10;
     }
-
     
-    int DI_array_length = inputLen + random_string_length*2;
+    int DI_array_length = inputLen + random_string_length*2 + 10; 
     
     struct timeval s_time_range, e_time_range;
     gettimeofday(&s_time_range, NULL);
@@ -248,8 +247,14 @@ void handle_one_TR(char *readID, int inputLen, int print_alignment){
     
     struct timeval s_time_chaining, e_time_chaining;
     gettimeofday(&s_time_chaining, NULL);
+#ifdef DEBUG_Aug2022
+        fprintf(stderr, "Chaining begins.\n");
+#endif
     
     chaining(print_alignment);
+#ifdef DEBUG_Aug2022
+        fprintf(stderr, "Chaining ends.\n");
+#endif
     
     gettimeofday(&e_time_chaining, NULL);
     time_chaining += (e_time_chaining.tv_sec - s_time_chaining.tv_sec) + (e_time_chaining.tv_usec - s_time_chaining.tv_usec)*1.0E-6;
