@@ -128,7 +128,7 @@ void find_tandem_repeat(int query_start, int query_end, int w, char *readID, int
     for(int k = min_k; k <= max_k; k = k + inc_size){
         // To rr, assign readID, inputLen and k-mer
         clear_rr(tmp_rr);
-        strcpy( tmp_rr->readID, readID);
+        snprintf( tmp_rr->readID, sizeof(tmp_rr->readID), "%s", readID);
         tmp_rr->inputLen = inputLen;
         tmp_rr->Kmer = k;
         
